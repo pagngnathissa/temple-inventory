@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ශ්‍රී බෝධිරාජාරාම විහාරස්ථානය</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .temple-nav { background-color: #ffc107; border-bottom: 3px solid #d39e00; }
+    </style>
+</head>
+<body>
+
+<!-- අලුත් සරල මෙනුව (Menu) -->
+<nav class="navbar navbar-light temple-nav shadow-sm">
+  <div class="container d-flex justify-content-between align-items-center">
+    
+    <!-- ලෝගෝ එක සහ නම -->
+    <a class="navbar-brand fw-bold text-dark d-flex align-items-center" href="{{ url_for('dashboard') }}">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" width="45" height="45" class="rounded-circle me-2 shadow-sm">
+        <span class="d-none d-sm-inline">ශ්‍රී බෝධිරාජාරාම විහාරස්ථානය</span>
+        <span class="d-inline d-sm-none" style="font-size: 1.1rem;">ශ්‍රී බෝධිරාජාරාම</span>
+    </a>
+    
+    <!-- අයිකන් පමණක් ඇති මෙනුව (ඉරි කෑලි 3 ඉවත් කර ඇත) -->
+    <div class="d-flex align-items-center">
+        <a href="{{ url_for('dashboard') }}" class="text-dark fs-4 me-3" title="ප්‍රධාන පිටුව"><i class="fas fa-home"></i></a>
+        <a href="{{ url_for('change_password') }}" class="text-primary fs-4 me-3" title="ඔබගේ මුරපදය මාරු කරන්න"><i class="fas fa-cog"></i></a>
+        <a href="{{ url_for('logout') }}" class="text-danger fs-4" title="ඉවත් වන්න"><i class="fas fa-sign-out-alt"></i></a>
+    </div>
+    
+  </div>
+</nav>
+
+<div class="container mt-4 mb-5 pb-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

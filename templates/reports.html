@@ -1,0 +1,304 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+    .report-btn { cursor: pointer; transition: all 0.2s ease-in-out; border: 2px solid transparent; border-radius: 12px; }
+    .report-btn:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+    .report-btn.active { border-color: #0d6efd; background-color: #f8f9fa; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); }
+</style>
+
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap">
+        <h4 class="fw-bold text-dark mb-2"><i class="fas fa-file-invoice text-info me-2"></i> පද්ධතියේ වාර්තා</h4>
+        <div class="d-flex gap-2 mb-2">
+            {% if current_user.role == 'owner' %}
+            <button onclick="exportToExcel()" class="btn btn-success btn-sm fw-bold"><i class="fas fa-file-excel me-1"></i> Excel</button>
+            <button onclick="exportToPDF()" class="btn btn-danger btn-sm fw-bold"><i class="fas fa-file-pdf me-1"></i> PDF</button>
+            {% endif %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold"><i class="fas fa-arrow-left me-1"></i> ආපසු</a>
+        </div>
+    </div>
+</div>
+
+<!-- මාසය තේරීම -->
+<div class="card shadow-sm border-dark mb-4">
+    <div class="card-body p-2 px-3 d-flex justify-content-between align-items-center flex-wrap bg-light">
+        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-calendar-alt me-2 text-primary"></i> කාල සීමාව:</h6>
+        <form action="{{ url_for('reports') }}" method="GET" class="d-flex mt-2 mt-sm-0">
+            <select name="month" class="form-select form-select-sm border-dark me-2" onchange="this.form.submit()">
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }} වෙනි මාසය</option>
+                {% endfor %}
+            </select>
+            <select name="year" class="form-select form-select-sm border-dark" onchange="this.form.submit()">
+                {% for y in range(2024, 2030) %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- බොත්තම් 6ක Grid එක (Nav Tabs වෙනුවට) -->
+<div class="row g-2 mb-4" id="reportTabs" role="tablist">
+    <div class="col-6 col-md-4">
+        <div class="card report-btn active shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#stock-consumable" onclick="setActiveCard(this)">
+            <i class="fas fa-box-open fa-2x text-warning mb-2"></i>
+            <span class="fw-bold small text-dark">පිරිකර තොගය</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#stock-returnable" onclick="setActiveCard(this)">
+            <i class="fas fa-utensils fa-2x text-info mb-2"></i>
+            <span class="fw-bold small text-dark">උපකරණ තොගය</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#daily" onclick="setActiveCard(this)">
+            <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
+            <span class="fw-bold small text-dark">දිනපතා ගනුදෙනු</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#others" onclick="setActiveCard(this)">
+            <i class="fas fa-shopping-cart fa-2x text-success mb-2"></i>
+            <span class="fw-bold small text-dark">පිරිකර නිකුත් කිරීම්</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#history" onclick="setActiveCard(this)">
+            <i class="fas fa-history fa-2x text-secondary mb-2"></i>
+            <span class="fw-bold small text-dark">දාන මාන ඉතිහාසය</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#damaged" onclick="setActiveCard(this)">
+            <i class="fas fa-heart-broken fa-2x text-danger mb-2"></i>
+            <span class="fw-bold small text-dark">හානි වාර්තා</span>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-lg border-dark mb-5">
+    <div class="card-body bg-white p-0 table-responsive">
+        <div class="tab-content" id="reportTabsContent">
+            
+            <!-- 1. පිරිකර තොගය -->
+            <div class="tab-pane fade show active" id="stock-consumable" role="tabpanel">
+                <table class="table table-hover mb-0 border-dark align-middle text-center" id="table_stock_consumable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-start ps-4">පිරිකර/පරිභෝජන භාණ්ඩයේ නම</th>
+                            <th>දැනට ඉතිරි ප්‍රමාණය</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stock if item.category == 'consumable' %}
+                        <tr>
+                            <td class="text-start fw-bold text-dark ps-4">{{ item.name }}</td>
+                            <td><span class="badge {% if item.quantity < 5 %}bg-danger{% else %}bg-success{% endif %} fs-6">{{ item.quantity }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="py-4 fw-bold text-muted">දත්ත නොමැත.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 2. උපකරණ තොගය -->
+            <div class="tab-pane fade" id="stock-returnable" role="tabpanel">
+                <table class="table table-hover mb-0 border-dark align-middle text-center" id="table_stock_returnable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-start ps-4">උපකරණ භාණ්ඩයේ නම</th>
+                            <th>දැනට ඉතිරි ප්‍රමාණය</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stock if item.category == 'returnable' %}
+                        <tr>
+                            <td class="text-start fw-bold text-dark ps-4">{{ item.name }}</td>
+                            <td><span class="badge {% if item.quantity < 10 %}bg-danger{% else %}bg-info text-dark{% endif %} fs-6">{{ item.quantity }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="py-4 fw-bold text-muted">දත්ත නොමැත.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 3. දිනපතා ගනුදෙනු -->
+            <div class="tab-pane fade" id="daily" role="tabpanel">
+                <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_daily">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>දිනය/වේලාව</th>
+                            <th class="text-start ps-3">භාණ්ඩය</th>
+                            <th>ක්‍රියාව</th>
+                            <th>ප්‍රමාණය</th>
+                            <th>විස්තරය</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-start fw-bold text-dark ps-3">{{ tx.item.name }}</td>
+                            <td>
+                                {% if tx.action_type in ['add_stock', 'add_new'] %} <span class="badge bg-primary">එක්කළා</span>
+                                {% elif tx.action_type == 'returned' %} <span class="badge bg-success">භාරගත්තා</span>
+                                {% elif tx.action_type == 'damaged' %} <span class="badge bg-danger">හානි/ඉවත් කළා</span>
+                                {% elif tx.action_type == 'sale' %} <span class="badge bg-warning text-dark">විකිණීම</span>
+                                {% else %} <span class="badge bg-info text-dark">නිකුත් කළා</span>
+                                {% endif %}
+                            </td>
+                            <td class="fs-5 fw-bold text-dark">{{ tx.quantity }}</td>
+                            <td class="text-muted small fw-bold">{{ tx.description if tx.description else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="py-5 fw-bold text-muted">දිනපතා ගනුදෙනු නොමැත.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 4. පිරිකර ගනුදෙනු -->
+            <div class="tab-pane fade" id="others" role="tabpanel">
+                <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_others">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>දිනය</th>
+                            <th class="text-start ps-3">භාණ්ඩයේ නම</th>
+                            <th>හේතුව</th>
+                            <th>ප්‍රමාණය</th>
+                            <th>ආදායම (රු.)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in others %}
+                        <tr>
+                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-start fw-bold text-dark ps-3">{{ tx.item.name }}</td>
+                            <td>
+                                {% if tx.action_type == 'sale' %}
+                                    <span class="badge bg-primary">විකිණීම</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">පරිභෝජනය</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold fs-5">{{ tx.quantity }}</td>
+                            <td class="fw-bold text-success">{{ tx.amount if tx.amount else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="py-4 fw-bold text-muted">පිරිකර ගනුදෙනු නොමැත.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 5. දාන මාන ඉතිහාසය -->
+            <div class="tab-pane fade" id="history" role="tabpanel">
+                <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_history">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-start ps-3">අරගෙන ගිය කෙනා</th>
+                            <th>දුරකථනය/ප්‍රදේශය</th>
+                            <th>දුන්න දිනය</th>
+                            <th>තත්ත්වය</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lending in lendings %}
+                        <tr>
+                            <td class="text-start fw-bold text-dark ps-3">{{ lending.borrower_name }}</td>
+                            <td>
+                                <div class="text-primary fw-bold">{{ lending.phone_number }}</div>
+                                <div class="small text-muted">{{ lending.location }}</div>
+                            </td>
+                            <td><span class="badge bg-secondary">{{ lending.issue_date.strftime('%Y-%m-%d') if lending.issue_date else '-' }}</span></td>
+                            <td>
+                                {% if lending.status == 'returned' %}
+                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i> භාරදී ඇත</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i> භාරදී නැත</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="py-4 fw-bold text-muted">ඉතිහාස වාර්තා නොමැත.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 6. හානි වූ භාණ්ඩ -->
+            <div class="tab-pane fade" id="damaged" role="tabpanel">
+                <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_damaged">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>දිනය</th>
+                            <th class="text-start ps-3">භාණ්ඩයේ නම</th>
+                            <th>ප්‍රමාණය</th>
+                            <th>හේතුව (විස්තරය)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in damaged %}
+                        <tr>
+                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-start fw-bold text-dark ps-3">{{ tx.item.name }}</td>
+                            <td><span class="badge bg-danger fs-5">{{ tx.quantity }}</span></td>
+                            <td class="text-muted fw-bold">{{ tx.description if tx.description else '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="py-4 fw-bold text-success">හානි වූ භාණ්ඩ වාර්තා වී නොමැත.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Click කළ බොත්තම වර්ණ ගැන්වීම
+    function setActiveCard(element) {
+        document.querySelectorAll('.report-btn').forEach(card => card.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    function getActiveTableId() {
+        let activeTab = document.querySelector('.tab-pane.active').id;
+        if (activeTab === 'stock-consumable') return 'table_stock_consumable';
+        if (activeTab === 'stock-returnable') return 'table_stock_returnable';
+        if (activeTab === 'daily') return 'table_daily';
+        if (activeTab === 'others') return 'table_others';
+        if (activeTab === 'history') return 'table_history';
+        if (activeTab === 'damaged') return 'table_damaged';
+        return 'table_stock_consumable';
+    }
+
+    function exportToExcel() {
+        let tableId = getActiveTableId();
+        let wb = XLSX.utils.table_to_book(document.getElementById(tableId), {sheet: "Report"});
+        XLSX.writeFile(wb, tableId + '_Report.xlsx');
+    }
+
+    function exportToPDF() {
+        let tableId = getActiveTableId();
+        let element = document.getElementById(tableId);
+        let opt = {
+            margin:       0.5,
+            filename:     tableId + '_Report.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+    }
+</script>
+{% endblock %}

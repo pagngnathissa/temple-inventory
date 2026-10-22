@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h3 class="fw-bold text-dark"><i class="fas fa-users-cog text-warning me-2"></i> ගිණුම් කළමනාකරණය</h3>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold"><i class="fas fa-arrow-left"></i> ආපසු</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- නව ගිණුමක් සෑදීම -->
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-lg border-dark h-100">
+            <div class="card-header bg-warning text-dark fw-bold border-bottom border-dark">
+                <i class="fas fa-user-plus me-2"></i> නව ගිණුමක් සාදන්න
+            </div>
+            <div class="card-body bg-light">
+                <form action="" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label text-dark fw-bold">සම්පූර්ණ නම</label>
+                        <input type="text" class="form-control border-dark" name="full_name" placeholder="උදා: සමාධි ස්වාමීන් වහන්සේ" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-dark fw-bold">ඇතුල් වීමේ නම (Username)</label>
+                        <input type="text" class="form-control border-dark" name="username" placeholder="උදා: samadhi" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-dark fw-bold">මුරපදය (Password)</label>
+                        <input type="password" class="form-control border-dark" name="password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100 fw-bold shadow"><i class="fas fa-save me-2"></i> ගිණුම සාදන්න</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- දැනට ඇති ගිණුම් -->
+    <div class="col-md-7 mb-4">
+        <div class="card shadow-lg border-dark h-100">
+            <div class="card-header bg-white border-bottom border-dark text-dark fw-bold">
+                <i class="fas fa-list me-2 text-primary"></i> සාමාන්‍ය ගිණුම් ලැයිස්තුව
+            </div>
+            <div class="card-body p-0 table-responsive bg-light">
+                <table class="table table-hover mb-0 border-dark table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">නම සහ Username</th>
+                            <th class="text-center">ක්‍රියාවන්</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-bold text-dark">{{ user.full_name }}</div>
+                                <div class="small text-primary fw-bold">@{{ user.username }}</div>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-dark fw-bold border-dark" data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}">
+                                    <i class="fas fa-edit"></i> වෙනස් කරන්න
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- ගිණුම වෙනස් කිරීමේ Pop-up එක (Modal) -->
+                        <div class="modal fade" id="editUserModal{{ user.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-dark shadow-lg">
+                                    <form action="{{ url_for('edit_user', user_id=user.id) }}" method="POST">
+                                        <div class="modal-header bg-warning border-bottom border-dark">
+                                            <h6 class="modal-title fw-bold text-dark"><i class="fas fa-user-edit me-2"></i> ගිණුම වෙනස් කිරීම</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body bg-light text-start">
+                                            <div class="mb-3">
+                                                <label class="form-label text-dark fw-bold">සම්පූර්ණ නම</label>
+                                                <input type="text" class="form-control border-dark" name="full_name" value="{{ user.full_name }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-dark fw-bold">නව Username</label>
+                                                <input type="text" class="form-control border-dark text-primary fw-bold" name="username" value="{{ user.username }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label text-dark fw-bold">නව මුරපදය (Password)</label>
+                                                <input type="text" class="form-control border-dark" name="password" placeholder="වෙනස් නොකරන්නේ නම් හිස්ව තබන්න">
+                                                <small class="text-muted fw-bold">මුරපදය මාරු කිරීමට අවශ්‍ය නම් පමණක් මෙහි ටයිප් කරන්න.</small>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-top border-dark bg-white p-2">
+                                            <button type="submit" class="btn btn-warning w-100 fw-bold text-dark shadow"><i class="fas fa-save me-2"></i> සේව් කරන්න</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="text-center text-muted fw-bold py-4">දැනට වෙනත් සාමාන්‍ය ගිණුම් නොමැත.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

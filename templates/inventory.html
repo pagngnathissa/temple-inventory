@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h3 class="fw-bold text-dark"><i class="fas fa-boxes text-primary me-2"></i> ගබඩා කළමනාකරණය</h3>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold"><i class="fas fa-arrow-left"></i> ආපසු</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- නව භාණ්ඩයක්/තොගයක් එකතු කිරීමේ පෝරමය (වම් පස) -->
+    <div class="col-12 col-lg-4 mb-4">
+        <div class="card shadow-lg border-dark">
+            <div class="card-header bg-primary text-white fw-bold border-bottom border-dark">
+                <i class="fas fa-plus-circle me-2"></i> භාණ්ඩ / තොග එක් කරන්න
+            </div>
+            <div class="card-body bg-light">
+                <form action="{{ url_for('inventory') }}" method="POST">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-dark fw-bold">වර්ගය තෝරන්න</label>
+                        <select class="form-select border-dark" name="category" id="inventoryCategory" onchange="updateInventoryItemList()" required>
+                            <option value="" disabled selected>මුලින්ම වර්ගය තෝරන්න...</option>
+                            <option value="consumable">පිරිකර සහ පරිභෝජන</option>
+                            <option value="returnable">භාණ්ඩ සහ උපකරණ</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-dark fw-bold">භාණ්ඩයේ නම</label>
+                        <input type="text" class="form-control border-dark" name="name" id="inventoryItemName" list="inventoryItemNamesList" placeholder="ලැයිස්තුවෙන් තෝරන්න හෝ අලුතින් ටයිප් කරන්න" required disabled>
+                        <datalist id="inventoryItemNamesList"></datalist>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-dark fw-bold">එකතු කරන ප්‍රමාණය</label>
+                        <input type="number" class="form-control border-dark text-center fw-bold fs-5" name="quantity" placeholder="ප්‍රමාණය ඇතුළත් කරන්න..." min="1" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-bold shadow"><i class="fas fa-save me-2"></i> ගබඩාවට එක් කරන්න</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- මාසික සාරාංශය පෙන්වන කොටස (දකුණු පස) -->
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-lg border-dark">
+            <div class="card-header bg-white border-bottom border-dark d-flex justify-content-between align-items-center p-3">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-chart-bar me-2 text-info"></i> මාසික සාරාංශය</h5>
+                
+                <form action="{{ url_for('inventory') }}" method="GET" class="d-flex align-items-center">
+                    <select name="month" class="form-select form-select-sm border-dark me-2" onchange="this.form.submit()">
+                        {% for m in range(1, 13) %}
+                            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }} වෙනි මාසය</option>
+                        {% endfor %}
+                    </select>
+                    <select name="year" class="form-select form-select-sm border-dark" onchange="this.form.submit()">
+                        {% for y in range(2024, 2030) %}
+                            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+            
+            <div class="card-body p-0 bg-light">
+                <ul class="nav nav-tabs border-dark flex-nowrap" id="summaryTabs" role="tablist">
+                    <li class="nav-item w-50" role="presentation">
+                        <button class="nav-link active fw-bold text-warning py-2 px-1 w-100" style="color: #d39e00 !important; font-size: 0.9rem;" id="summary-consumable-tab" data-bs-toggle="tab" data-bs-target="#summary-consumable" type="button" role="tab">
+                            <i class="fas fa-box-open me-1 d-none d-sm-inline"></i>පිරිකර/පරිභෝජන
+                        </button>
+                    </li>
+                    <li class="nav-item w-50" role="presentation">
+                        <button class="nav-link fw-bold text-info py-2 px-1 w-100" style="color: #0dcaf0 !important; font-size: 0.9rem;" id="summary-returnable-tab" data-bs-toggle="tab" data-bs-target="#summary-returnable" type="button" role="tab">
+                            <i class="fas fa-utensils me-1 d-none d-sm-inline"></i>භාණ්ඩ/උපකරණ
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="summaryTabsContent">
+                    
+                    <!-- 1 වන Tab එක: පිරිකර -->
+                    <div class="tab-pane fade show active" id="summary-consumable" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 border-dark table-striped text-center align-middle" style="font-size: 0.95rem;">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-start ps-3">භාණ්ඩයේ නම</th>
+                                        <th>මාසය මුලදී</th>
+                                        <th>එකතු කළ</th>
+                                        <th>නිකුත් කළ</th>
+                                        <th>දැනට ඉතිරි</th>
+                                        <th>ක්‍රියාවන්</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in summary if row.item.category == 'consumable' %}
+                                    <tr>
+                                        <td class="text-start fw-bold text-dark ps-3">{{ row.item.name }}</td>
+                                        <td>{{ row.initial_qty }}</td>
+                                        <td class="text-success fw-bold">+{{ row.added_this_month }}</td>
+                                        <td class="text-danger fw-bold">-{{ row.issued_this_month }}</td>
+                                        <td>
+                                            <span class="badge {% if row.current_qty < 5 %}bg-danger{% else %}bg-success{% endif %} rounded-pill fs-6">{{ row.current_qty }}</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger fw-bold" data-bs-toggle="modal" data-bs-target="#damageModal{{ row.item.id }}">
+                                                <i class="fas fa-minus-circle"></i> ඉවත් කරන්න
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="6" class="text-muted fw-bold py-4">මෙම මාසය සඳහා දත්ත නොමැත.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 2 වන Tab එක: භාණ්ඩ සහ උපකරණ -->
+                    <div class="tab-pane fade" id="summary-returnable" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 border-dark table-striped text-center align-middle" style="font-size: 0.95rem;">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-start ps-3">භාණ්ඩයේ නම</th>
+                                        <th>මාසය මුලදී</th>
+                                        <th>එකතු කළ</th>
+                                        <th>නිකුත් කළ</th>
+                                        <th>දැනට ඉතිරි</th>
+                                        <th>ක්‍රියාවන්</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in summary if row.item.category == 'returnable' %}
+                                    <tr>
+                                        <td class="text-start fw-bold text-dark ps-3">{{ row.item.name }}</td>
+                                        <td>{{ row.initial_qty }}</td>
+                                        <td class="text-success fw-bold">+{{ row.added_this_month }}</td>
+                                        <td class="text-danger fw-bold">-{{ row.issued_this_month }}</td>
+                                        <td>
+                                            <span class="badge {% if row.current_qty < 10 %}bg-danger{% else %}bg-info text-dark{% endif %} rounded-pill fs-6">{{ row.current_qty }}</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger fw-bold" data-bs-toggle="modal" data-bs-target="#damageModal{{ row.item.id }}">
+                                                <i class="fas fa-minus-circle"></i> ඉවත් කරන්න
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="6" class="text-muted fw-bold py-4">මෙම මාසය සඳහා දත්ත නොමැත.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- හානි වූ භාණ්ඩ ඉවත් කිරීමේ Pop-ups (Modals) -->
+{% for row in summary %}
+<div class="modal fade" id="damageModal{{ row.item.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-dark shadow-lg">
+            <form action="{{ url_for('remove_damage', item_id=row.item.id) }}" method="POST">
+                <div class="modal-header bg-danger border-bottom border-dark text-white">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-heart-broken me-2"></i> {{ row.item.name }} ඉවත් කිරීම</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-white text-start">
+                    <div class="mb-3">
+                        <label class="form-label text-dark fw-bold">ඉවත් කරන ප්‍රමාණය:</label>
+                        <input type="number" class="form-control border-dark text-center fw-bold fs-4 text-danger" name="damaged_qty" min="1" max="{{ row.item.quantity }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-dark fw-bold">හේතුව (විස්තරය):</label>
+                        <!-- datalist එකක් මගින් මූලික හේතු පෙන්වීම -->
+                        <input type="text" class="form-control border-dark" name="reason" list="reasonList" placeholder="තෝරන්න හෝ ටයිප් කරන්න" required>
+                        <datalist id="reasonList">
+                            <option value="මීයන් කා ඇත">
+                            <option value="කැඩී ඇත">
+                            <option value="කල් ඉකුත් වී ඇත">
+                            <option value="දිරාපත් වී ඇත">
+                            <option value="අස්ථානගත වී ඇත">
+                        </datalist>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-dark bg-light p-2">
+                    <button type="submit" class="btn btn-danger w-100 fw-bold border-dark text-white"><i class="fas fa-trash-alt me-2"></i> ගබඩාවෙන් ඉවත් කරන්න</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+    const inventoryDbItems = {
+        'consumable': [],
+        'returnable': []
+    };
+    {% for item in items %}
+        if (inventoryDbItems['{{ item.category }}']) {
+            inventoryDbItems['{{ item.category }}'].push('{{ item.name }}');
+        }
+    {% endfor %}
+
+    const inventoryDefaultItems = {
+        'consumable': ['අටපිරිකර', 'සිවුර', 'අඳනය', 'සබන්', 'තේ කොළ', 'සීනි', 'කිරිපිටි', 'ගිලන්පස'],
+        'returnable': ['පිඟන්', 'කෝප්ප', 'වීදුරු', 'කිරි කප්', 'හැඳි', 'පඩික්කම්', 'කේතල්', 'ජෝග්ගු', 'මුතු කුඩ', 'කරඬු ස්ටෑන්ඩ්']
+    };
+
+    function updateInventoryItemList() {
+        const category = document.getElementById('inventoryCategory').value;
+        const nameInput = document.getElementById('inventoryItemName');
+        const dataList = document.getElementById('inventoryItemNamesList');
+        
+        nameInput.disabled = false;
+        nameInput.value = ''; 
+        dataList.innerHTML = '';
+        
+        let combinedInventoryItems = new Set([...(inventoryDefaultItems[category] || []), ...(inventoryDbItems[category] || [])]);
+        
+        combinedInventoryItems.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            dataList.appendChild(option);
+        });
+    }
+</script>
+{% endblock %}

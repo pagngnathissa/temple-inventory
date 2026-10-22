@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h3 class="fw-bold text-dark"><i class="fas fa-hand-holding-heart text-success me-2"></i> භාණ්ඩ නිකුත් කිරීම</h3>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold"><i class="fas fa-arrow-left"></i> ආපසු</a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-9 mb-4">
+        <div class="card shadow-lg border-dark h-100">
+            <div class="card-header bg-white border-bottom p-0">
+                <!-- Tab දෙක 50/50 බෙදීම (flex-nowrap සහ w-50 භාවිතයෙන්) -->
+                <ul class="nav nav-tabs border-dark flex-nowrap" id="issueTabs" role="tablist">
+                    <li class="nav-item w-50" role="presentation">
+                        <button class="nav-link active fw-bold text-success py-2 px-1 w-100" style="font-size: 0.9rem;" id="dana-tab" data-bs-toggle="tab" data-bs-target="#dana" type="button" role="tab">
+                            <i class="fas fa-utensils me-1 d-none d-sm-inline"></i>දාන මාන (ආපසු)
+                        </button>
+                    </li>
+                    <li class="nav-item w-50" role="presentation">
+                        <button class="nav-link fw-bold text-warning py-2 px-1 w-100" style="color: #d39e00 !important; font-size: 0.9rem;" id="other-tab" data-bs-toggle="tab" data-bs-target="#other" type="button" role="tab">
+                            <i class="fas fa-box-open me-1 d-none d-sm-inline"></i>පිරිකර / වෙනත්
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="card-body bg-light p-4">
+                <div class="tab-content" id="issueTabsContent">
+                    
+                    <!-- 1 වන Tab එක: දාන මාන -->
+                    <div class="tab-pane fade show active" id="dana" role="tabpanel">
+                        <form action="" method="POST">
+                            <input type="hidden" name="issue_type" value="dana">
+                            
+                            <div class="mb-4">
+                                <label class="form-label text-dark fw-bold fs-5">ස්වාමීන් වහන්සේලා ගණන</label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-white border-dark"><i class="fas fa-users text-success"></i></span>
+                                    <input type="number" class="form-control border-dark fw-bold text-center text-primary fs-4" id="monkCount" min="1" oninput="calculateItems()">
+                                </div>
+                            </div>
+                            
+                            <div class="alert border border-dark shadow-sm bg-white" id="autoCalcBox" style="display: none;">
+                                <h6 class="fw-bold text-danger border-bottom pb-2 mb-3"><i class="fas fa-info-circle"></i> අවශ්‍ය ප්‍රමාණයන් කොටු තුල වෙනස් කළ හැක</h6>
+                                
+                                <!-- මූලික භාණ්ඩ -->
+                                <p class="text-dark fw-bold mb-2">මූලික භාණ්ඩ:</p>
+                                <div class="row text-center mb-4 g-2">
+                                    <div class="col-4 col-md-2">
+                                        <label class="fw-bold text-dark small">පිඟන්</label>
+                                        <input type="number" class="form-control text-center fw-bold border-dark" name="plates_qty" id="plateQty" value="0" min="0">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="fw-bold text-dark small">කෝප්ප</label>
+                                        <input type="number" class="form-control text-center fw-bold border-dark" name="cups_qty" id="cupQty" value="0" min="0">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="fw-bold text-dark small">වීදුරු</label>
+                                        <input type="number" class="form-control text-center fw-bold border-dark" name="glasses_qty" id="glassQty" value="0" min="0">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="fw-bold text-dark small">කිරි කප්</label>
+                                        <input type="number" class="form-control text-center fw-bold border-dark" name="milkcups_qty" id="milkCupQty" value="0" min="0">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="fw-bold text-dark small">හැඳි</label>
+                                        <input type="number" class="form-control text-center fw-bold border-dark" name="spoons_qty" id="spoonQty" value="0" min="0">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="fw-bold text-dark small">අත හෝදන</label>
+                                        <input type="number" class="form-control text-center fw-bold border-dark" name="basins_qty" id="basinQty" value="0" min="0">
+                                    </div>
+                                </div>
+
+                                <!-- අමතර භාණ්ඩ -->
+                                <p class="text-dark fw-bold mb-2">අමතර භාණ්ඩ:</p>
+                                <div class="row text-center mb-2 g-2">
+                                    {% set extra_predefined = ['පඩික්කම්', 'කේතල්', 'ජෝග්ගු', 'අඬු කෝප්ප', 'මුතු කුඩ', 'කරඬු ස්ටෑන්ඩ්'] %}
+                                    {% set main_items = ['පිඟන්', 'කෝප්ප', 'වීදුරු', 'කිරි කප්', 'හැඳි', 'අත හෝදන භාජන'] %}
+                                    
+                                    {% for ename in extra_predefined %}
+                                        <div class="col-4 col-md-2">
+                                            <label class="fw-bold text-dark small">{{ ename }}</label>
+                                            <input type="number" class="form-control text-center fw-bold border-dark" name="extra_qty_{{ ename }}" id="{% if ename == 'පඩික්කම්' %}spittoonQty{% endif %}" value="0" min="0">
+                                        </div>
+                                    {% endfor %}
+
+                                    <!-- Database එකේ තියෙන අනිත් අමතර භාණ්ඩ -->
+                                    {% for item in items if item.category == 'returnable' and item.name not in main_items and item.name not in extra_predefined %}
+                                        <div class="col-4 col-md-2">
+                                            <label class="fw-bold text-dark small">{{ item.name }}</label>
+                                            <input type="number" class="form-control text-center fw-bold border-dark" name="extra_qty_{{ item.name }}" value="0" min="0">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <hr class="border-dark my-4">
+
+                            <div class="mb-3">
+                                <label class="form-label text-dark fw-bold">අරගෙන යන කෙනාගේ නම</label>
+                                <input type="text" class="form-control border-dark" name="borrower_name" required>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <label class="form-label text-dark fw-bold">දුරකථන අංකය</label>
+                                    <input type="text" class="form-control border-dark" name="phone_number" placeholder="07XXXXXXXX" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-dark fw-bold">ප්‍රදේශය (ගම)</label>
+                                    <input type="text" class="form-control border-dark" name="area" list="areaList" placeholder="ටයිප් කරන්න හෝ තෝරන්න" required>
+                                    <datalist id="areaList">
+                                        <option value="ටි ටි එ පාර">
+                                        <option value="ලකී විජේරත්න පෙදෙස">
+                                        <option value="සමන්පුර">
+                                        <option value="නාලන්දා පුර">
+                                        <option value="චීන වරාය">
+                                        <option value="ධාන්‍යගම">
+                                        <option value="ලංකාපාලම">
+                                    </datalist>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow"><i class="fab fa-whatsapp me-2"></i> නිකුත් කර WhatsApp පණිවිඩය යවන්න</button>
+                        </form>
+                    </div>
+
+                    <!-- 2 වන Tab එක: පිරිකර -->
+                    <div class="tab-pane fade" id="other" role="tabpanel">
+                        <form action="" method="POST">
+                            <input type="hidden" name="issue_type" value="other">
+                            
+                            <div class="mb-3">
+                                <label class="form-label text-dark fw-bold">වර්ගය තෝරන්න</label>
+                                <select class="form-select border-dark" name="category" id="issueCategory" onchange="updateIssueItemList()" required>
+                                    <option value="" disabled selected>මුලින්ම වර්ගය තෝරන්න...</option>
+                                    <option value="consumable">පිරිකර සහ පරිභෝජන</option>
+                                    <option value="returnable">භාණ්ඩ සහ උපකරණ</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-dark fw-bold">භාණ්ඩයේ නම</label>
+                                <input type="text" class="form-control border-dark" name="item_name" id="issueItemName" list="filteredItemList" placeholder="ලැයිස්තුවෙන් තෝරන්න හෝ ටයිප් කරන්න" oninput="calculateTotalAmount()" required disabled>
+                                <datalist id="filteredItemList"></datalist>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-dark fw-bold">ප්‍රමාණය</label>
+                                <input type="number" class="form-control border-dark" name="quantity" id="otherQty" min="1" value="1" oninput="calculateTotalAmount()" required>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label text-dark fw-bold">හේතුව</label>
+                                <select class="form-select border-dark" name="reason" id="reasonSelect" onchange="checkReason()" required>
+                                    <option value="" disabled selected>හේතුව තෝරන්න...</option>
+                                    <option value="පරිභෝජනය සඳහා">පරිභෝජනය සඳහා</option>
+                                    <option value="sale">විකිණීම සඳහා (මුදල් ආදායම්)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-4 bg-warning bg-opacity-25 p-3 rounded border border-warning" id="amountDiv" style="display: none;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label text-dark fw-bold mb-0">ගෙවිය යුතු මුළු මුදල (රු.)</label>
+                                    <span id="unitPriceDisplay" class="badge bg-danger fs-6"></span>
+                                </div>
+                                <input type="number" class="form-control border-dark fw-bold text-success fs-4" name="amount" id="totalAmount" min="0" value="0">
+                            </div>
+
+                            <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow text-dark"><i class="fas fa-save me-2"></i> පද්ධතියේ සටහන් කරන්න</button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculateItems() {
+        const monks = parseInt(document.getElementById('monkCount').value) || 0;
+        const box = document.getElementById('autoCalcBox');
+        
+        if (monks > 0) {
+            box.style.display = 'block';
+            document.getElementById('plateQty').value = monks;
+            document.getElementById('cupQty').value = monks;
+            document.getElementById('glassQty').value = monks;
+            document.getElementById('milkCupQty').value = monks;
+            document.getElementById('spoonQty').value = monks;
+            document.getElementById('basinQty').value = monks;
+            
+            const spittoon = document.getElementById('spittoonQty');
+            if (spittoon) spittoon.value = (monks >= 5) ? 3 : 1;
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    const itemPrices = {
+        "අටපිරිකර": 2500,
+        "සිවුර": 1500,
+        "අඳනය": 500
+    };
+
+    // Database එකේ බඩු වර්ග අනුව වෙන් කිරීම
+    const dbItems = {
+        'consumable': [],
+        'returnable': []
+    };
+    {% for item in items %}
+        if (dbItems['{{ item.category }}']) {
+            dbItems['{{ item.category }}'].push('{{ item.name }}');
+        }
+    {% endfor %}
+    
+    const defaultItems = {
+        'consumable': ['අටපිරිකර', 'සිවුර', 'අඳනය', 'සබන්', 'තේ කොළ', 'සීනි', 'කිරිපිටි', 'ගිලන්පස'],
+        'returnable': ['පිඟන්', 'කෝප්ප', 'වීදුරු', 'කිරි කප්', 'හැඳි', 'පඩික්කම්', 'කේතල්', 'ජෝග්ගු', 'මුතු කුඩ', 'කරඬු ස්ටෑන්ඩ්']
+    };
+
+    function updateIssueItemList() {
+        const category = document.getElementById('issueCategory').value;
+        const nameInput = document.getElementById('issueItemName');
+        const dataList = document.getElementById('filteredItemList');
+        
+        nameInput.disabled = false;
+        nameInput.value = ''; 
+        dataList.innerHTML = '';
+        
+        // මූලික ලිස්ට් එකයි Database එකේ ලිස්ට් එකයි එකතු කරලා පෙන්නනවා
+        let combined = new Set([...defaultItems[category], ...dbItems[category]]);
+        
+        combined.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            dataList.appendChild(option);
+        });
+        calculateTotalAmount(); 
+    }
+
+    function checkReason() {
+        const reason = document.getElementById('reasonSelect').value;
+        const amountDiv = document.getElementById('amountDiv');
+        if (reason === 'sale') {
+            amountDiv.style.display = 'block';
+            calculateTotalAmount(); 
+        } else {
+            amountDiv.style.display = 'none';
+        }
+    }
+
+    function calculateTotalAmount() {
+        const reason = document.getElementById('reasonSelect').value;
+        const itemName = document.getElementById('issueItemName').value;
+        const qty = parseInt(document.getElementById('otherQty').value) || 1;
+        const amountInput = document.getElementById('totalAmount');
+        const unitPriceDisplay = document.getElementById('unitPriceDisplay');
+
+        if (reason === 'sale') {
+            if (itemPrices[itemName]) {
+                const unitPrice = itemPrices[itemName];
+                unitPriceDisplay.className = "badge bg-danger fs-6"; 
+                unitPriceDisplay.innerText = "එකක මිල: රු. " + unitPrice;
+                amountInput.value = unitPrice * qty; 
+            } else {
+                unitPriceDisplay.className = "badge bg-primary fs-6"; 
+                unitPriceDisplay.innerText = "නව භාණ්ඩයකි: මිල ඇතුළත් කරන්න";
+                amountInput.value = ''; 
+            }
+        }
+    }
+</script>
+{% endblock %}

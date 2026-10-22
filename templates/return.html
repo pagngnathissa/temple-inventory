@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <h3 class="fw-bold text-dark"><i class="fas fa-undo-alt text-danger me-2"></i> ආපසු භාරගැනීම් සහ අඩුපාඩු</h3>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold"><i class="fas fa-arrow-left"></i> ආපසු</a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        
+        <!-- භාරගැනීමට ඇති ලැයිස්තුව ලස්සන Cards විදිහට පෙන්වීම -->
+        {% for lending in lendings %}
+        <div class="card shadow-sm border-dark mb-3 hover-card">
+            <div class="card-body p-3 p-md-4">
+                <div class="row align-items-center text-center text-md-start">
+                    
+                    <!-- නම -->
+                    <div class="col-12 col-md-3 mb-3 mb-md-0">
+                        <h5 class="fw-bold text-dark mb-1"><i class="fas fa-user-circle text-secondary me-2"></i>{{ lending.borrower_name }}</h5>
+                    </div>
+                    
+                    <!-- දුරකථනය සහ ප්‍රදේශය -->
+                    <div class="col-12 col-md-3 mb-3 mb-md-0">
+                        <div class="text-primary fw-bold fs-6"><i class="fas fa-phone-alt me-2 text-dark"></i>{{ lending.phone_number }}</div>
+                        <div class="text-muted fw-bold small mt-1"><i class="fas fa-map-marker-alt me-2 text-danger"></i>{{ lending.location }}</div>
+                    </div>
+                    
+                    <!-- දුන්න දිනය -->
+                    <div class="col-12 col-md-3 mb-3 mb-md-0 text-center">
+                        <span class="badge bg-light text-dark border border-dark px-3 py-2 fs-6 shadow-sm">
+                            <i class="fas fa-calendar-alt me-2 text-danger"></i>
+                            {% if lending.issue_date %}
+                                {{ lending.issue_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                                අද දින
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <!-- බොත්තම -->
+                    <div class="col-12 col-md-3 text-md-end text-center">
+                        <button class="btn btn-success fw-bold shadow border-dark text-dark w-100 py-2" data-bs-toggle="modal" data-bs-target="#returnModal{{ lending.id }}">
+                            <i class="fas fa-box-open me-2"></i> පරීක්ෂා කර භාරගන්න
+                        </button>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-check-double fa-4x mb-3 text-success"></i>
+            <h4 class="text-muted fw-bold mt-2">දැනට භාරගැනීමට කිසිවක් නොමැත.</h4>
+            <p class="text-secondary">සියලුම භාණ්ඩ සාර්ථකව භාරගෙන අවසන්!</p>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+<!-- Pop-ups (Modals) ටික කාඩ් එකෙන් සම්පූර්ණයෙන්ම පිටතට ගෙන ඇත (එවිට වගු කැඩෙන්නේ නැත) -->
+{% for lending in lendings %}
+<div class="modal fade" id="returnModal{{ lending.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-dark shadow-lg">
+            <form action="{{ url_for('mark_returned', lending_id=lending.id) }}" method="POST">
+                <div class="modal-header bg-success border-bottom border-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-check-circle me-2"></i> {{ lending.borrower_name }} ගේ භාණ්ඩ භාරගැනීම</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light text-start">
+                    <div class="alert alert-warning border-dark shadow-sm">
+                        <p class="fw-bold text-dark mb-0"><i class="fas fa-info-circle me-2 text-danger"></i> අඩුවෙන් ගෙනාපු හෝ හානි වූ බඩු ඇත්නම් පමණක් අදාළ කොටුවේ අංකය සටහන් කරන්න. (සියල්ල නිවැරදි නම් '0' ලෙසම තබා භාරගන්න).</p>
+                    </div>
+                    
+                    <div class="table-responsive mt-3">
+                        <table class="table table-bordered border-dark text-center align-middle bg-white">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-start ps-3">භාණ්ඩයේ නම</th>
+                                    <th>රැගෙන ගිය ප්‍රමාණය</th>
+                                    <th class="bg-danger text-white">අඩු/හානි වූ ප්‍රමාණය</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for l_item in lending.items %}
+                                <tr>
+                                    <td class="text-start fw-bold text-dark ps-3">{{ l_item.item.name }}</td>
+                                    <td class="fs-4 fw-bold text-primary">{{ l_item.issued_qty }}</td>
+                                    <td>
+                                        <input type="number" class="form-control border-dark text-center fw-bold text-danger mx-auto fs-5" style="width: 120px;" name="damaged_qty_{{ l_item.id }}" value="0" min="0" max="{{ l_item.issued_qty }}" required>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-dark bg-white p-3">
+                    <button type="submit" class="btn btn-success w-100 fw-bold shadow border-dark text-dark fs-5 py-2">
+                        <i class="fab fa-whatsapp me-2 fs-4 align-middle"></i> භාරගෙන WhatsApp පණිවිඩය යවන්න
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+    .hover-card { transition: transform 0.2s; }
+    .hover-card:hover { transform: scale(1.01); }
+</style>
+{% endblock %}

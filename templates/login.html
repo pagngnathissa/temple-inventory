@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+        <div class="card shadow-lg border-0 rounded-4">
+            <div class="card-body p-4 p-sm-5 text-center">
+                <!-- ලොගින් පිටුවේ ලෝගෝ එක -->
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Temple Logo" class="img-fluid mb-4 rounded-circle shadow" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #ffc107;">
+                
+                <h4 class="fw-bold mb-4 text-secondary">ගබඩා පද්ධතිය</h4>
+                
+                <form action="" method="POST">
+                    <div class="mb-3 text-start">
+                        <label for="username" class="form-label fw-semibold text-muted">පරිශීලක නම</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
+                            <input type="text" class="form-control bg-light" id="username" name="username" placeholder="ඔබගේ නම" required>
+                        </div>
+                    </div>
+                    <div class="mb-4 text-start">
+                        <label for="password" class="form-label fw-semibold text-muted">මුරපදය</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
+                            <input type="password" class="form-control bg-light" id="password" name="password" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold py-2 rounded-pill shadow-sm" style="font-size: 1.1rem;">
+                        <i class="fas fa-sign-in-alt me-2"></i> ඇතුල් වන්න
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
