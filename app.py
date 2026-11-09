@@ -5,7 +5,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import urllib.parse 
 from sqlalchemy import extract
-
+import os
+from flask import send_file
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'pansala_secret_key_123'
@@ -479,6 +480,54 @@ def remove_damage(item_id):
         flash('ඇතුළත් කළ ප්‍රමාණය වැරදියි හෝ ගබඩාවේ ඇති ප්‍රමාණයට වඩා වැඩියි.', 'danger')
         
     return redirect(url_for('inventory'))
+
+
+@app.route('/admin/backup')
+@login_required
+def backup_database():
+    # ප්‍රධාන ඇඩ්මින්ට (owner) පමණක් බැකප් ලබා ගැනීමට සැලසීම
+    if current_user.role != 'owner':
+        flash('මෙම ක්‍රියාව කිරීමට ඔබට අවසර නැත.', 'danger')
+        return redirect(url_for('dashboard'))
+        
+    db_path = os.path.join(app.instance_path, 'temple.db')
+    if os.path.exists(db_path):
+        return send_file(db_path, as_attachment=True, download_name='temple_backup.db')
+    else:
+        flash('ඩේටාබේස් ගොනුව හමුවුණේ නැත!', 'danger')
+        return redirect(url_for('dashboard'))
+
+@app.route('/admin/restore', methods=['POST'])
+@login_required
+def restore_database():
+    # ප්‍රධාන ඇඩ්මින්ට (owner) පමණක් රීස්ටෝර් කිරීමට සැලසීම
+    if current_user.role != 'owner':
+        flash('මෙම ක්‍රියාව කිරීමට ඔබට අවසර නැත.', 'danger')
+        return redirect(url_for('dashboard'))
+        
+    if 'backup_file' not in request.files:
+        flash('බැකප් ගොනුවක් තෝරා නැත.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    file = request.files['backup_file']
+    if file.filename == '':
+        flash('ගොනුවේ නම හිස්ය.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if file and file.filename.endswith('.db'):
+        db_path = os.path.join(app.instance_path, 'temple.db')
+        file.save(db_path)
+        flash('දත්ත ගබඩාව සාර්ථකව ප්‍රතිස්ථාපනය (Restore) කරන ලදී! කරුණාකර නැවත ලොග් වන්න.', 'success')
+        return redirect(url_for('logout'))
+    else:
+        flash('කරුණාකර නිවැරදි .db වර්ගයේ ගොනුවක් තෝරන්න.', 'danger')
+        return redirect(url_for('dashboard'))
+
+# --- මෙන්න මේ කොටසට උඩින් තමයි ඉහත කෝඩ් එක දාන්න ඕනේ ---
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        # (ඉතිරි කෝඩ් එක සුපුරුදු පරිදි පවතී...)    
 
 if __name__ == '__main__':
     with app.app_context():

@@ -82,6 +82,55 @@
     </div>
     {% endif %}
 </div>
+<!-- 6. රහස්‍ය නිකුත් කිරීම (Secret Account පමණි) -->
+    {% if current_user.role == 'secret' %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="#" class="text-decoration-none">
+            <div class="card shadow-sm border-0 h-100 text-center p-3 hover-card bg-dark text-white">
+                <i class="fas fa-user-secret fa-3x text-danger mb-3"></i>
+                <h5 class="card-title fw-bold text-white" style="font-size: 1.1rem;">විශේෂ නිකුත් කිරීම්</h5>
+                <p class="card-text text-light small d-none d-sm-block">සටහන් නොවන නිකුත් කිරීම්</p>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+</div> <!-- මෙන්න මේ div එක ඉවර වන තැනට පහළින් (ან Style ටැග් එකට උඩින්) මෙය දාන්න -->
+
+{% if current_user.role == 'owner' %}
+<!-- දත්ත ගබඩා කළමනාකරණය (Backup & Restore) -->
+<div class="card shadow-sm border-0 my-4 p-4">
+    <h4 class="fw-bold text-secondary mb-3"><i class="fas fa-database text-warning"></i> දත්ත ගබඩා කළමනාකරණය (Backup & Restore)</h4>
+    <hr>
+    <div class="row">
+        <!-- Backup Download -->
+        <div class="col-md-3 mb-3">
+            
+            <a href="{{ url_for('backup_database') }}" class="btn btn-primary w-100 py-2">
+                <i class="fas fa-download me-2"></i> Backup ඩවුන්ලෝඩ් කරන්න
+            </a>
+        </div>
+        
+        <!-- Restore Upload -->
+        <div class="col-md-3 mb-3">
+    
+            <form action="{{ url_for('restore_database') }}" method="POST" enctype="multipart/form-data">
+                <div class="input-group mb-2">
+                    <input type="file" class="form-control" name="backup_file" accept=".db" required>
+                    <button class="btn btn-danger" type="submit">
+                        <i class="fas fa-upload me-1"></i> Restore
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Hover Effect එක සඳහා CSS -->
+<style>
+    .hover-card { transition: all 0.3s ease-in-out; }
+    .hover-card:hover { transform: translateY(-5px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }
+</style>
 
 <!-- Hover Effect එක සඳහා CSS -->
 <style>
