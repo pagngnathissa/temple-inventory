@@ -261,9 +261,7 @@ def issue_items():
     items = Item.query.all()
     return render_template('issue.html', items=items)
 
-# app.py ගොනුවේ අදාළ කොටස පමණි
 
-from sqlalchemy import extract # මෙය import කොටසට එකතු කරන්න
 
 @app.route('/inventory', methods=['GET', 'POST'])
 @login_required
@@ -271,7 +269,6 @@ def inventory():
     current_month = datetime.now().month
     current_year = datetime.now().year
     
-    # මාසය තේරීමට
     selected_month = request.args.get('month', current_month, type=int)
     selected_year = request.args.get('year', current_year, type=int)
 
@@ -280,30 +277,93 @@ def inventory():
         item_category = request.form.get('category')
         added_qty = request.form.get('quantity', 0, type=int)
         
-        # භාණ්ඩය කලින් තියෙනවද බලනවා
-        existing_item = Item.query.filter_by(name=item_name).first()
-        if existing_item:
-            existing_item.quantity += added_qty
-            new_tx = Transaction(item_id=existing_item.id, user_id=current_user.id, action_type='add_stock', quantity=added_qty)
-            db.session.add(new_tx)
-            flash(f'{item_name} සඳහා තොගය සාර්ථකව යාවත්කාලීන කළා.', 'success')
-        else:
-            new_item = Item(name=item_name, category=item_category, quantity=added_qty)
-            db.session.add(new_item)
-            db.session.flush()
-            new_tx = Transaction(item_id=new_item.id, user_id=current_user.id, action_type='add_new', quantity=added_qty)
-            db.session.add(new_tx)
-            flash(f'{item_name} සාර්ථකව ගබඩාවට එකතු කළා.', 'success')
-            
-        db.session.commit()
+        if added_qty > 0 and item_name:
+            existing_item = Item.query.filter_by(name=item_name).first()
+            if existing_item:
+                existing_item.quantity += added_qty
+                new_tx = Transaction(item_id=existing_item.id, user_id=current_user.id, action_type='add_stock', quantity=added_qty)
+                db.session.add(new_tx)
+                flash(f'{item_name} සඳහා තොගය සාර්ථකව යාවත්කාලීන කළා.', 'success')
+            else:
+                new_item = Item(name=item_name, category=item_category, quantity=added_qty)
+                db.session.add(new_item)
+                db.session.flush()
+                new_tx = Transaction(item_id=new_item.id, user_id=current_user.id, action_type='add_new', quantity=added_qty)
+                db.session.add(new_tx)
+                flash(f'{item_name} සාර්ථකව ගබඩාවට එකතු කළා.', 'success')
+                
+            db.session.commit()
         return redirect(url_for('inventory', month=selected_month, year=selected_year))
         
     items = Item.query.all()
     
-    # මාසික සාරාංශය සෑදීම
+    recent_additions = Transaction.query.filter(
+        Transaction.action_type.in_(['add_stock', 'add_new']),
+        extract('month', Transaction.date_time) == selected_month,
+        extract('year', Transaction.date_time) == selected_year
+    ).order_by(Transaction.id.desc()).all()
+
+    # අද දිනය ලබා ගැනීම
+    now_date = datetime.utcnow().date()
+
+    return render_template('inventory.html', 
+                           items=items, 
+                           recent_additions=recent_additions, 
+                           selected_month=selected_month, 
+                           selected_year=selected_year,
+                           now_date=now_date) # මෙන්න මේක අනිවාර්යයෙන් පාස් කළ යුතුය
+
+
+
+
+from datetime import datetime
+
+@app.route('/delete_transaction/<int:tx_id>', methods=['POST'])
+@login_required
+def delete_transaction(tx_id):
+    tx = Transaction.query.get_or_404(tx_id)
+    item = Item.query.get(tx.item_id)
+    
+    # දින සංසන්දනය කිරීම (අද දින සහ ගනුදෙනු කළ දිනය)
+    today_date = datetime.utcnow().date()
+    tx_date = tx.date_time.date()
+    
+    is_owner = (current_user.role == 'owner')
+    is_own_today_tx = (tx.user_id == current_user.id and tx_date == today_date)
+    
+    # Owner හෝ (තමන්ගේම ගිණුමෙන් අද දින දැමූ එකක් නම් පමණක්) අවසර ඇත
+    if not (is_owner or is_own_today_tx):
+        flash('මෙම ඇතුළත් කිරීම මකා දැමීමට ඔබට අවසර නැත. (දවස ඉක්මවා ගොස් ඇත හෝ වෙනත් පරිශීලකයෙකුගේ ඇතුළත් කිරීමකි)', 'danger')
+        return redirect(url_for('inventory'))
+
+    if tx.action_type in ['add_stock', 'add_new']:
+        if item.quantity >= tx.quantity:
+            item.quantity -= tx.quantity
+            
+            # විගණන කටයුතු / වාර්තා සඳහා මෙය ඉවත් කළ බව Transaction එකක 'deleted_entry' ලෙස සටහන් කිරීම
+            tx.action_type = 'deleted_entry'
+            tx.description = f'ඉවත් කරන ලදී (කළේ: {current_user.full_name})'
+            db.session.commit()
+            
+            flash(f'{item.name} ගේ වැරදීමකින් එක් කළ තොගය ({tx.quantity}) සාර්ථකව ඉවත් කර වාර්තාවට එකතු කළා.', 'success')
+        else:
+            flash('ගබඩාවේ ඇති ප්‍රමාණයට වඩා වැඩි ප්‍රමාණයක් ඉවත් කළ නොහැක.', 'danger')
+            
+    return redirect(url_for('inventory'))
+
+@app.route('/monthly_summary')
+@login_required
+def monthly_summary():
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    selected_month = request.args.get('month', current_month, type=int)
+    selected_year = request.args.get('year', current_year, type=int)
+    
+    items = Item.query.all()
     monthly_summary = []
+    
     for item in items:
-        # තෝරාගත් මාසයට අදාළ ගනුදෙනු
         transactions = Transaction.query.filter(
             Transaction.item_id == item.id,
             extract('month', Transaction.date_time) == selected_month,
@@ -311,11 +371,8 @@ def inventory():
         ).all()
         
         added_this_month = sum(tx.quantity for tx in transactions if tx.action_type in ['add_stock', 'add_new'])
-        # issued_this_month සඳහා action_type එක 'dana' හෝ වෙනත් නිකුත් කිරීමක් නම් පමණක් සලකන්න (මෙය ඔබගේ transaction action_types මත රඳා පවතී)
-        # දැනට සරලව සෘණ නොවන action_types හැර අනෙක්වා නිකුත් කිරීම් ලෙස සලකමු (මෙය ඔබගේ කේතයට අනුව වෙනස් විය හැක)
         issued_this_month = sum(tx.quantity for tx in transactions if tx.action_type not in ['add_stock', 'add_new']) 
         
-        # මාසය මුල තිබූ ප්‍රමාණය (දැනට ඇති ප්‍රමාණය - එකතු කළ + නිකුත් කළ)
         initial_qty = item.quantity - added_this_month + issued_this_month 
         
         monthly_summary.append({
@@ -326,7 +383,8 @@ def inventory():
             'current_qty': item.quantity
         })
 
-    return render_template('inventory.html', items=items, summary=monthly_summary, selected_month=selected_month, selected_year=selected_year)
+    return render_template('monthly_summary.html', summary=monthly_summary, selected_month=selected_month, selected_year=selected_year)
+
 
 @app.route('/edit_user/<int:user_id>', methods=['POST'])
 @login_required
@@ -537,7 +595,7 @@ if __name__ == '__main__':
         if not User.query.filter_by(role='owner').first():
             # Owner ගිණුම (ඔබගේ ගිණුම)
             owner_pass = generate_password_hash('Owner@123', method='pbkdf2:sha256')
-            owner = User(username='admin', full_name='පඤ්ඤාතිස්ස ස්වාමීන් වහන්සේ', password=owner_pass, role='owner')
+            owner = User(username='admin', full_name='පඤ්ඤාතිස්ස හීමි', password=owner_pass, role='owner')
             db.session.add(owner)
             
             # රහස්‍ය (Secret) ගිණුම

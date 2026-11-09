@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap">
+        <h4 class="fw-bold text-dark mb-2"><i class="fas fa-chart-pie text-secondary me-2"></i> මාසික සාරාංශ වාර්තාව</h4>
+        <div class="d-flex gap-2 mb-2">
+            {% if current_user.role == 'owner' %}
+            <button onclick="window.print()" class="btn btn-primary btn-sm fw-bold"><i class="fas fa-print me-1"></i> Print / PDF</button>
+            <button onclick="exportSummaryExcel()" class="btn btn-success btn-sm fw-bold"><i class="fas fa-file-excel me-1"></i> Excel</button>
+            {% endif %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold"><i class="fas fa-arrow-left me-1"></i> ආපසු</a>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-dark mb-4">
+    <div class="card-body p-2 px-3 d-flex justify-content-between align-items-center flex-wrap bg-light">
+        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-calendar-alt me-2 text-primary"></i> කාල සීමාව:</h6>
+        <form action="{{ url_for('monthly_summary') }}" method="GET" class="d-flex mt-2 mt-sm-0">
+            <select name="month" class="form-select form-select-sm border-dark me-2" onchange="this.form.submit()">
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }} වෙනි මාසය</option>
+                {% endfor %}
+            </select>
+            <select name="year" class="form-select form-select-sm border-dark" onchange="this.form.submit()">
+                {% for y in range(2024, 2030) %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-lg border-dark mb-5" id="printableArea">
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover mb-0 border-dark align-middle text-center" id="summaryTable">
+            <thead class="table-dark">
+                <tr>
+                    <th class="text-start ps-4">භාණ්ඩයේ නම</th>
+                    <th>මාසය මුලදී</th>
+                    <th>එකතු කළ</th>
+                    <th>නිකුත් කළ</th>
+                    <th>දැනට ඉතිරි</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary %}
+                <tr>
+                    <td class="text-start fw-bold text-dark ps-4">{{ row.item.name }}</td>
+                    <td class="fw-bold text-secondary">{{ row.initial_qty }}</td>
+                    <td class="fw-bold text-success">+{{ row.added_this_month }}</td>
+                    <td class="fw-bold text-danger">-{{ row.issued_this_month }}</td>
+                    <td>
+                        <span class="badge {% if row.current_qty < 5 %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                            {{ row.current_qty }}
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="py-4 fw-bold text-muted">දත්ත නොමැත.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function exportSummaryExcel() {
+    let wb = XLSX.utils.table_to_book(document.getElementById('summaryTable'), {sheet: "Summary"});
+    XLSX.writeFile(wb, 'Monthly_Summary.xlsx');
+}
+</script>
+{% endblock %}

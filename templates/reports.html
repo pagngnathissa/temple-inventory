@@ -5,35 +5,56 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
-    .report-btn { cursor: pointer; transition: all 0.2s ease-in-out; border: 2px solid transparent; border-radius: 12px; }
-    .report-btn:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
-    .report-btn.active { border-color: #0d6efd; background-color: #f8f9fa; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); }
+    .report-card { 
+        cursor: pointer; 
+        transition: all 0.25s ease-in-out; 
+        border-radius: 14px; 
+    }
+    .report-card:hover { 
+        transform: translateY(-4px); 
+        box-shadow: 0 0.8rem 1.5rem rgba(0,0,0,.15)!important; 
+    }
+    .report-card.active-card {
+        border: 3px solid #0d6efd !important;
+        background-color: #eef5ff !important;
+    }
 </style>
 
-<div class="row mb-3">
-    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap">
-        <h4 class="fw-bold text-dark mb-2"><i class="fas fa-file-invoice text-info me-2"></i> පද්ධතියේ වාර්තා</h4>
-        <div class="d-flex gap-2 mb-2">
-            {% if current_user.role == 'owner' %}
-            <button onclick="exportToExcel()" class="btn btn-success btn-sm fw-bold"><i class="fas fa-file-excel me-1"></i> Excel</button>
-            <button onclick="exportToPDF()" class="btn btn-danger btn-sm fw-bold"><i class="fas fa-file-pdf me-1"></i> PDF</button>
-            {% endif %}
-            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold"><i class="fas fa-arrow-left me-1"></i> ආපසු</a>
-        </div>
+<!-- පිටුවේ ඉහළ Navigation Bar එක (Heading සහ Export Buttons) -->
+<div class="row mb-3 align-items-center">
+    <div class="col-12 col-md-6 mb-2 mb-md-0">
+        <h4 class="fw-bold text-dark mb-0">
+            <i class="fas fa-file-invoice text-info me-2"></i> පද්ධතියේ වාර්තා
+        </h4>
+    </div>
+    <div class="col-12 col-md-6 text-md-end d-flex gap-2 justify-content-md-end">
+        {% if current_user.role == 'owner' %}
+        <button onclick="exportToExcel()" class="btn btn-success btn-sm fw-bold shadow-sm">
+            <i class="fas fa-file-excel me-1"></i> Excel
+        </button>
+        <button onclick="exportToPDF()" class="btn btn-danger btn-sm fw-bold shadow-sm">
+            <i class="fas fa-file-pdf me-1"></i> PDF / Print
+        </button>
+        {% endif %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold shadow-sm">
+            <i class="fas fa-arrow-left me-1"></i> ආපසු
+        </a>
     </div>
 </div>
 
-<!-- මාසය තේරීම -->
+<!-- මාසය සහ අවුරුද්ද තේරීම -->
 <div class="card shadow-sm border-dark mb-4">
     <div class="card-body p-2 px-3 d-flex justify-content-between align-items-center flex-wrap bg-light">
-        <h6 class="mb-0 fw-bold text-dark"><i class="fas fa-calendar-alt me-2 text-primary"></i> කාල සීමාව:</h6>
+        <h6 class="mb-0 fw-bold text-dark">
+            <i class="fas fa-calendar-alt me-2 text-primary"></i> කාල සීමාව:
+        </h6>
         <form action="{{ url_for('reports') }}" method="GET" class="d-flex mt-2 mt-sm-0">
-            <select name="month" class="form-select form-select-sm border-dark me-2" onchange="this.form.submit()">
+            <select name="month" class="form-select form-select-sm border-dark me-2 fw-bold" onchange="this.form.submit()">
                 {% for m in range(1, 13) %}
                     <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }} වෙනි මාසය</option>
                 {% endfor %}
             </select>
-            <select name="year" class="form-select form-select-sm border-dark" onchange="this.form.submit()">
+            <select name="year" class="form-select form-select-sm border-dark fw-bold" onchange="this.form.submit()">
                 {% for y in range(2024, 2030) %}
                     <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
                 {% endfor %}
@@ -42,54 +63,71 @@
     </div>
 </div>
 
-<!-- බොත්තම් 6ක Grid එක (Nav Tabs වෙනුවට) -->
-<div class="row g-2 mb-4" id="reportTabs" role="tablist">
+<!-- ================= 1. වාර්තා තේරීමේ ප්‍රධාන පුවරුව (Main Menu Grid) ================= -->
+<div id="mainReportMenu" class="row g-3 mb-4">
     <div class="col-6 col-md-4">
-        <div class="card report-btn active shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#stock-consumable" onclick="setActiveCard(this)">
-            <i class="fas fa-box-open fa-2x text-warning mb-2"></i>
-            <span class="fw-bold small text-dark">පිරිකර තොගය</span>
+        <div class="card report-card shadow-sm h-100 text-center p-3 border-dark" onclick="openReportView('stock-consumable')">
+            <i class="fas fa-box-open fa-3x text-warning mb-2"></i>
+            <span class="fw-bold text-dark d-block fs-6">පිරිකර තොගය</span>
+            <small class="text-muted">ඉතිරි පරිභෝජන ද්‍රව්‍ය</small>
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#stock-returnable" onclick="setActiveCard(this)">
-            <i class="fas fa-utensils fa-2x text-info mb-2"></i>
-            <span class="fw-bold small text-dark">උපකරණ තොගය</span>
+        <div class="card report-card shadow-sm h-100 text-center p-3 border-dark" onclick="openReportView('stock-returnable')">
+            <i class="fas fa-utensils fa-3x text-info mb-2"></i>
+            <span class="fw-bold text-dark d-block fs-6">උපකරණ තොගය</span>
+            <small class="text-muted">ඉතිරි භාණ්ඩ තොගය</small>
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#daily" onclick="setActiveCard(this)">
-            <i class="fas fa-list-alt fa-2x text-primary mb-2"></i>
-            <span class="fw-bold small text-dark">දිනපතා ගනුදෙනු</span>
+        <div class="card report-card shadow-sm h-100 text-center p-3 border-dark" onclick="openReportView('daily')">
+            <i class="fas fa-list-alt fa-3x text-primary mb-2"></i>
+            <span class="fw-bold text-dark d-block fs-6">දිනපතා ගනුදෙනු</span>
+            <small class="text-muted">ඇතුළත් කිරීම් සහ වෙනස්කම්</small>
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#others" onclick="setActiveCard(this)">
-            <i class="fas fa-shopping-cart fa-2x text-success mb-2"></i>
-            <span class="fw-bold small text-dark">පිරිකර නිකුත් කිරීම්</span>
+        <div class="card report-card shadow-sm h-100 text-center p-3 border-dark" onclick="openReportView('others')">
+            <i class="fas fa-shopping-cart fa-3x text-success mb-2"></i>
+            <span class="fw-bold text-dark d-block fs-6">පිරිකර නිකුත් කිරීම්</span>
+            <small class="text-muted">විකිණීම් / පරිභෝජන</small>
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#history" onclick="setActiveCard(this)">
-            <i class="fas fa-history fa-2x text-secondary mb-2"></i>
-            <span class="fw-bold small text-dark">දාන මාන ඉතිහාසය</span>
+        <div class="card report-card shadow-sm h-100 text-center p-3 border-dark" onclick="openReportView('history')">
+            <i class="fas fa-history fa-3x text-secondary mb-2"></i>
+            <span class="fw-bold text-dark d-block fs-6">දාන මාන ඉතිහාසය</span>
+            <small class="text-muted">පිටතට ලබාදුන් උපකරණ</small>
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card report-btn shadow-sm h-100 text-center p-3" data-bs-toggle="tab" data-bs-target="#damaged" onclick="setActiveCard(this)">
-            <i class="fas fa-heart-broken fa-2x text-danger mb-2"></i>
-            <span class="fw-bold small text-dark">හානි වාර්තා</span>
+        <div class="card report-card shadow-sm h-100 text-center p-3 border-dark" onclick="openReportView('damaged')">
+            <i class="fas fa-heart-broken fa-3x text-danger mb-2"></i>
+            <span class="fw-bold text-dark d-block fs-6">හානි වාර්තා</span>
+            <small class="text-muted">අඩු වූ / හානි වූ භාණ්ඩ</small>
         </div>
     </div>
 </div>
 
-<div class="card shadow-lg border-dark mb-5">
-    <div class="card-body bg-white p-0 table-responsive">
-        <div class="tab-content" id="reportTabsContent">
+<!-- ================= 2. තෝරාගත් වාර්තාව පමණක් පෙනෙන වෙනම පිටුව (Single Full View) ================= -->
+<div id="singleReportPage" class="d-none">
+    
+    <!-- වාර්තා පිටුවෙන් ආපසු යාමේ Header Bar එක -->
+    <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light border border-dark rounded shadow-sm">
+        <button onclick="closeReportView()" class="btn btn-secondary btn-sm fw-bold">
+            <i class="fas fa-arrow-left me-1"></i> වෙනත් වාර්තාවක් තෝරන්න
+        </button>
+        <span id="reportViewTitle" class="fw-bold fs-5 text-dark"></span>
+        <span class="badge bg-primary px-3 py-2 fs-6">සම්පූර්ණ වාර්තාව</span>
+    </div>
+
+    <div class="card shadow-lg border-dark mb-5">
+        <div class="card-body p-0 table-responsive bg-white" id="reportPrintArea">
             
             <!-- 1. පිරිකර තොගය -->
-            <div class="tab-pane fade show active" id="stock-consumable" role="tabpanel">
+            <div class="report-section d-none" id="stock-consumable">
                 <table class="table table-hover mb-0 border-dark align-middle text-center" id="table_stock_consumable">
-                    <thead class="table-dark">
+                    <thead class="table-dark border-dark">
                         <tr>
                             <th class="text-start ps-4">පිරිකර/පරිභෝජන භාණ්ඩයේ නම</th>
                             <th>දැනට ඉතිරි ප්‍රමාණය</th>
@@ -109,9 +147,9 @@
             </div>
 
             <!-- 2. උපකරණ තොගය -->
-            <div class="tab-pane fade" id="stock-returnable" role="tabpanel">
+            <div class="report-section d-none" id="stock-returnable">
                 <table class="table table-hover mb-0 border-dark align-middle text-center" id="table_stock_returnable">
-                    <thead class="table-dark">
+                    <thead class="table-dark border-dark">
                         <tr>
                             <th class="text-start ps-4">උපකරණ භාණ්ඩයේ නම</th>
                             <th>දැනට ඉතිරි ප්‍රමාණය</th>
@@ -130,57 +168,61 @@
                 </table>
             </div>
 
-            <!-- 3. දිනපතා ගනුදෙනු -->
-            <div class="tab-pane fade" id="daily" role="tabpanel">
+            <!-- 3. දිනපතා ගනුදෙනු (සටහන් කළ පරිශීලකයාගේ නම සහිතයි) -->
+            <div class="report-section d-none" id="daily">
                 <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_daily">
-                    <thead class="table-dark">
+                    <thead class="table-dark border-dark">
                         <tr>
                             <th>දිනය/වේලාව</th>
                             <th class="text-start ps-3">භාණ්ඩය</th>
                             <th>ක්‍රියාව</th>
                             <th>ප්‍රමාණය</th>
+                            <th class="bg-primary text-white">සටහන් කළේ (කවුද)</th>
                             <th>විස්තරය</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for tx in transactions %}
                         <tr>
-                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d') }}</td>
+                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td class="text-start fw-bold text-dark ps-3">{{ tx.item.name }}</td>
                             <td>
                                 {% if tx.action_type in ['add_stock', 'add_new'] %} <span class="badge bg-primary">එක්කළා</span>
                                 {% elif tx.action_type == 'returned' %} <span class="badge bg-success">භාරගත්තා</span>
                                 {% elif tx.action_type == 'damaged' %} <span class="badge bg-danger">හානි/ඉවත් කළා</span>
+                                {% elif tx.action_type == 'deleted_entry' %} <span class="badge bg-dark">මකා දමන ලදී</span>
                                 {% elif tx.action_type == 'sale' %} <span class="badge bg-warning text-dark">විකිණීම</span>
                                 {% else %} <span class="badge bg-info text-dark">නිකුත් කළා</span>
                                 {% endif %}
                             </td>
                             <td class="fs-5 fw-bold text-dark">{{ tx.quantity }}</td>
+                            <td><span class="badge bg-secondary fs-6 fw-bold">{{ tx.user.full_name }}</span></td>
                             <td class="text-muted small fw-bold">{{ tx.description if tx.description else '-' }}</td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="5" class="py-5 fw-bold text-muted">දිනපතා ගනුදෙනු නොමැත.</td></tr>
+                        <tr><td colspan="6" class="py-5 fw-bold text-muted">දිනපතා ගනුදෙනු නොමැත.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <!-- 4. පිරිකර ගනුදෙනු -->
-            <div class="tab-pane fade" id="others" role="tabpanel">
+            <!-- 4. පිරිකර ගනුදෙනු (සටහන් කළ පරිශීලකයාගේ නම සහිතයි) -->
+            <div class="report-section d-none" id="others">
                 <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_others">
-                    <thead class="table-dark">
+                    <thead class="table-dark border-dark">
                         <tr>
-                            <th>දිනය</th>
+                            <th>දිනය/වේලාව</th>
                             <th class="text-start ps-3">භාණ්ඩයේ නම</th>
                             <th>හේතුව</th>
                             <th>ප්‍රමාණය</th>
                             <th>ආදායම (රු.)</th>
+                            <th class="bg-primary text-white">සටහන් කළේ (කවුද)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for tx in others %}
                         <tr>
-                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d') }}</td>
+                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td class="text-start fw-bold text-dark ps-3">{{ tx.item.name }}</td>
                             <td>
                                 {% if tx.action_type == 'sale' %}
@@ -191,22 +233,24 @@
                             </td>
                             <td class="fw-bold fs-5">{{ tx.quantity }}</td>
                             <td class="fw-bold text-success">{{ tx.amount if tx.amount else '-' }}</td>
+                            <td><span class="badge bg-secondary fs-6 fw-bold">{{ tx.user.full_name }}</span></td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="5" class="py-4 fw-bold text-muted">පිරිකර ගනුදෙනු නොමැත.</td></tr>
+                        <tr><td colspan="6" class="py-4 fw-bold text-muted">පිරිකර ගනුදෙනු නොමැත.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <!-- 5. දාන මාන ඉතිහාසය -->
-            <div class="tab-pane fade" id="history" role="tabpanel">
+            <!-- 5. දාන මාන ඉතිහාසය (නිකුත් කළ පරිශීලකයාගේ නම සහිතයි) -->
+            <div class="report-section d-none" id="history">
                 <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_history">
-                    <thead class="table-dark">
+                    <thead class="table-dark border-dark">
                         <tr>
                             <th class="text-start ps-3">අරගෙන ගිය කෙනා</th>
                             <th>දුරකථනය/ප්‍රදේශය</th>
                             <th>දුන්න දිනය</th>
+                            <th class="bg-primary text-white">නිකුත් කළේ (කවුද)</th>
                             <th>තත්ත්වය</th>
                         </tr>
                     </thead>
@@ -219,6 +263,7 @@
                                 <div class="small text-muted">{{ lending.location }}</div>
                             </td>
                             <td><span class="badge bg-secondary">{{ lending.issue_date.strftime('%Y-%m-%d') if lending.issue_date else '-' }}</span></td>
+                            <td><span class="badge bg-secondary fs-6 fw-bold">{{ lending.user.full_name if lending.user else '-' }}</span></td>
                             <td>
                                 {% if lending.status == 'returned' %}
                                     <span class="badge bg-success"><i class="fas fa-check me-1"></i> භාරදී ඇත</span>
@@ -228,33 +273,35 @@
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4" class="py-4 fw-bold text-muted">ඉතිහාස වාර්තා නොමැත.</td></tr>
+                        <tr><td colspan="5" class="py-4 fw-bold text-muted">ඉතිහාස වාර්තා නොමැත.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
 
-            <!-- 6. හානි වූ භාණ්ඩ -->
-            <div class="tab-pane fade" id="damaged" role="tabpanel">
+            <!-- 6. හානි වූ භාණ්ඩ (සටහන් කළ පරිශීලකයාගේ නම සහිතයි) -->
+            <div class="report-section d-none" id="damaged">
                 <table class="table table-hover mb-0 border-dark table-striped align-middle text-center" id="table_damaged">
-                    <thead class="table-dark">
+                    <thead class="table-dark border-dark">
                         <tr>
-                            <th>දිනය</th>
+                            <th>දිනය/වේලාව</th>
                             <th class="text-start ps-3">භාණ්ඩයේ නම</th>
                             <th>ප්‍රමාණය</th>
+                            <th class="bg-primary text-white">සටහන් කළේ (කවුද)</th>
                             <th>හේතුව (විස්තරය)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for tx in damaged %}
                         <tr>
-                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d') }}</td>
+                            <td class="small fw-bold">{{ tx.date_time.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td class="text-start fw-bold text-dark ps-3">{{ tx.item.name }}</td>
                             <td><span class="badge bg-danger fs-5">{{ tx.quantity }}</span></td>
+                            <td><span class="badge bg-secondary fs-6 fw-bold">{{ tx.user.full_name }}</span></td>
                             <td class="text-muted fw-bold">{{ tx.description if tx.description else '-' }}</td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4" class="py-4 fw-bold text-success">හානි වූ භාණ්ඩ වාර්තා වී නොමැත.</td></tr>
+                        <tr><td colspan="5" class="py-4 fw-bold text-success">හානි වූ භාණ්ඩ වාර්තා වී නොමැත.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -265,20 +312,51 @@
 </div>
 
 <script>
-    // Click කළ බොත්තම වර්ණ ගැන්වීම
-    function setActiveCard(element) {
-        document.querySelectorAll('.report-btn').forEach(card => card.classList.remove('active'));
-        element.classList.add('active');
+    let currentActiveReportId = 'stock-consumable';
+
+    const reportTitles = {
+        'stock-consumable': '<i class="fas fa-box-open text-warning me-2"></i> පිරිකර තොග වාර්තාව',
+        'stock-returnable': '<i class="fas fa-utensils text-info me-2"></i> උපකරණ තොග වාර්තාව',
+        'daily': '<i class="fas fa-list-alt text-primary me-2"></i> දිනපතා ගනුදෙනු වාර්තාව',
+        'others': '<i class="fas fa-shopping-cart text-success me-2"></i> පිරිකර නිකුත් කිරීම් වාර්තාව',
+        'history': '<i class="fas fa-history text-secondary me-2"></i> දාන මාන ඉතිහාස වාර්තාව',
+        'damaged': '<i class="fas fa-heart-broken text-danger me-2"></i> හානි වූ භාණ්ඩ වාර්තාව'
+    };
+
+    // Card එකක් ක්ලික් කළ විට ප්‍රධාන Menu එක සඟවා අදාළ වාර්තා පිටුව ලෝඩ් කිරීම
+    function openReportView(sectionId) {
+        currentActiveReportId = sectionId;
+
+        // 1. ප්‍රධාන Menu එක සඟවන්න
+        document.getElementById('mainReportMenu').classList.add('d-none');
+
+        // 2. වාර්තා කොටස් සඟවා තෝරාගත් එක පමණක් පෙන්වන්න
+        document.querySelectorAll('.report-section').forEach(sec => sec.classList.add('d-none'));
+        document.getElementById(sectionId).classList.remove('d-none');
+
+        // 3. වාර්තා පිටුව (Single View) පෙන්වන්න
+        document.getElementById('singleReportPage').classList.remove('d-none');
+
+        // 4. මාතෘකාව මාරු කරන්න
+        document.getElementById('reportViewTitle').innerHTML = reportTitles[sectionId];
+        
+        // පිටුවේ ඉහළට Scroll කරන්න
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // වෙනත් වාර්තාවක් තේරීමට නැවත Main Menu එකට යාම
+    function closeReportView() {
+        document.getElementById('singleReportPage').classList.add('d-none');
+        document.getElementById('mainReportMenu').classList.remove('d-none');
     }
 
     function getActiveTableId() {
-        let activeTab = document.querySelector('.tab-pane.active').id;
-        if (activeTab === 'stock-consumable') return 'table_stock_consumable';
-        if (activeTab === 'stock-returnable') return 'table_stock_returnable';
-        if (activeTab === 'daily') return 'table_daily';
-        if (activeTab === 'others') return 'table_others';
-        if (activeTab === 'history') return 'table_history';
-        if (activeTab === 'damaged') return 'table_damaged';
+        if (currentActiveReportId === 'stock-consumable') return 'table_stock_consumable';
+        if (currentActiveReportId === 'stock-returnable') return 'table_stock_returnable';
+        if (currentActiveReportId === 'daily') return 'table_daily';
+        if (currentActiveReportId === 'others') return 'table_others';
+        if (currentActiveReportId === 'history') return 'table_history';
+        if (currentActiveReportId === 'damaged') return 'table_damaged';
         return 'table_stock_consumable';
     }
 

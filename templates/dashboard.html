@@ -22,7 +22,18 @@
         </a>
     </div>
 
-    <!-- 2. භාණ්ඩ නිකුත් කිරීම (Issue/Lend) -->
+    <!-- 2. මාසික සාරාංශය (Monthly Summary) -->
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('monthly_summary') }}" class="text-decoration-none">
+            <div class="card shadow-sm border-0 h-100 text-center p-3 hover-card">
+                <i class="fas fa-chart-pie fa-3x text-secondary mb-3"></i>
+                <h5 class="card-title fw-bold text-dark" style="font-size: 1.1rem;">මාසික සාරාංශය</h5>
+                <p class="card-text text-muted small d-none d-sm-block">තොග වෙනස්වීම් සාරාංශය</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- 3. භාණ්ඩ නිකුත් කිරීම (Issue/Lend) -->
     <div class="col-6 col-md-4 col-lg-3">
         <a href="{{ url_for('issue_items') }}" class="text-decoration-none">
             <div class="card shadow-sm border-0 h-100 text-center p-3 hover-card">
@@ -33,9 +44,8 @@
         </a>
     </div>
 
-    <!-- 3. ආපසු භාරගැනීම (Returns) -->
+    <!-- 4. ආපසු භාරගැනීම (Returns) -->
     <div class="col-6 col-md-4 col-lg-3">
-        <!-- මෙතැනයි ලින්ක් එක වෙනස් කළේ -->
         <a href="{{ url_for('returns') }}" class="text-decoration-none">
             <div class="card shadow-sm border-0 h-100 text-center p-3 hover-card">
                 <i class="fas fa-undo-alt fa-3x text-danger mb-3"></i>
@@ -45,7 +55,7 @@
         </a>
     </div>
 
-    <!-- 4. වාර්තා (Reports) -->
+    <!-- 5. වාර්තා (Reports) -->
     <div class="col-6 col-md-4 col-lg-3">
         <a href="{{ url_for('reports') }}" class="text-decoration-none">
             <div class="card shadow-sm border-0 h-100 text-center p-3 hover-card">
@@ -56,7 +66,7 @@
         </a>
     </div>
 
-    <!-- 5. පරිශීලක කළමනාකරණය (Owner පමණි) -->
+    <!-- 6. පරිශීලක කළමනාකරණය (Owner පමණි) -->
     {% if current_user.role == 'owner' %}
     <div class="col-6 col-md-4 col-lg-3">
         <a href="{{ url_for('manage_users') }}" class="text-decoration-none">
@@ -69,7 +79,7 @@
     </div>
     {% endif %}
 
-    <!-- 6. රහස්‍ය නිකුත් කිරීම (Secret Account පමණි) -->
+    <!-- 7. රහස්‍ය නිකුත් කිරීම (Secret Account පමණි) -->
     {% if current_user.role == 'secret' %}
     <div class="col-6 col-md-4 col-lg-3">
         <a href="#" class="text-decoration-none">
@@ -82,19 +92,6 @@
     </div>
     {% endif %}
 </div>
-<!-- 6. රහස්‍ය නිකුත් කිරීම (Secret Account පමණි) -->
-    {% if current_user.role == 'secret' %}
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="#" class="text-decoration-none">
-            <div class="card shadow-sm border-0 h-100 text-center p-3 hover-card bg-dark text-white">
-                <i class="fas fa-user-secret fa-3x text-danger mb-3"></i>
-                <h5 class="card-title fw-bold text-white" style="font-size: 1.1rem;">විශේෂ නිකුත් කිරීම්</h5>
-                <p class="card-text text-light small d-none d-sm-block">සටහන් නොවන නිකුත් කිරීම්</p>
-            </div>
-        </a>
-    </div>
-    {% endif %}
-</div> <!-- මෙන්න මේ div එක ඉවර වන තැනට පහළින් (ან Style ටැග් එකට උඩින්) මෙය දාන්න -->
 
 {% if current_user.role == 'owner' %}
 <!-- දත්ත ගබඩා කළමනාකරණය (Backup & Restore) -->
@@ -103,16 +100,16 @@
     <hr>
     <div class="row">
         <!-- Backup Download -->
-        <div class="col-md-3 mb-3">
-            
+        <div class="col-md-6 mb-3">
+            <p class="text-muted small">පද්ධතියේ දැනට පවතින සියලුම ගනුදෙනු, භාණ්ඩ සහ ගිණුම් විස්තර ආරක්ෂිතව පරිගණකයට බාගත කරගන්න:</p>
             <a href="{{ url_for('backup_database') }}" class="btn btn-primary w-100 py-2">
                 <i class="fas fa-download me-2"></i> Backup ඩවුන්ලෝඩ් කරන්න
             </a>
         </div>
         
         <!-- Restore Upload -->
-        <div class="col-md-3 mb-3">
-    
+        <div class="col-md-6 mb-3">
+            <p class="text-muted small">මීට පෙර ලබාගත් බැකප් ගොනුවක් (`.db`) තෝරා නැවත පද්ධතියට ඇතුළත් කරන්න:</p>
             <form action="{{ url_for('restore_database') }}" method="POST" enctype="multipart/form-data">
                 <div class="input-group mb-2">
                     <input type="file" class="form-control" name="backup_file" accept=".db" required>
@@ -126,13 +123,6 @@
 </div>
 {% endif %}
 
-<!-- Hover Effect එක සඳහා CSS -->
-<style>
-    .hover-card { transition: all 0.3s ease-in-out; }
-    .hover-card:hover { transform: translateY(-5px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }
-</style>
-
-<!-- Hover Effect එක සඳහා CSS -->
 <style>
     .hover-card { transition: all 0.3s ease-in-out; }
     .hover-card:hover { transform: translateY(-5px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15) !important; }

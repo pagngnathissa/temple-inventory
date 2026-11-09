@@ -11,7 +11,7 @@
 <div class="row">
     <!-- නව භාණ්ඩයක්/තොගයක් එකතු කිරීමේ පෝරමය (වම් පස) -->
     <div class="col-12 col-lg-4 mb-4">
-        <div class="card shadow-lg border-dark">
+        <div class="card shadow-lg border-dark mb-4">
             <div class="card-header bg-primary text-white fw-bold border-bottom border-dark">
                 <i class="fas fa-plus-circle me-2"></i> භාණ්ඩ / තොග එක් කරන්න
             </div>
@@ -42,6 +42,54 @@
                 </form>
             </div>
         </div>
+
+        <!-- මෑතකදී එකතු කළ තොග ලැයිස්තුව සහ මකාදැමීමේ (Delete) පහසුකම -->
+        <div class="card shadow-lg border-dark">
+            <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-history me-2"></i> මෑතකදී එක්කළ තොග</span>
+                <span class="badge bg-secondary">මෙම මාසය</span>
+            </div>
+            <div class="card-body p-0 table-responsive" style="max-height: 350px; overflow-y: auto;">
+                <table class="table table-hover table-striped mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>දිනය/වේලාව</th>
+                            <th class="text-start ps-2">භාණ්ඩය</th>
+                            <th>ප්‍රමාණය</th>
+                            <th>මකන්න</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                    {% for tx in recent_additions %}
+<tr>
+    <td class="small fw-bold">{{ tx.date_time.strftime('%m-%d %H:%M') }}</td>
+    <td class="text-start fw-bold text-dark ps-2">{{ tx.item.name }}</td>
+    <td><span class="badge bg-success">+{{ tx.quantity }}</span></td>
+    <td class="small text-muted">{{ tx.user.full_name }}</td>
+    <td>
+        {% set is_owner = (current_user.role == 'owner') %}
+        {% set is_own_user = (tx.user_id == current_user.id) %}
+        {% set is_today = (tx.date_time.date() == now_date) %}
+        
+        <!-- Owner ට හෝ (තමන්ගේ ගිණුමෙන් සහ අද දින දැමූ එකක් නම් පමණක්) බටන් එක පෙන්වයි -->
+        {% if is_owner or (is_own_user and is_today) %}
+            <form action="{{ url_for('delete_transaction', tx_id=tx.id) }}" method="POST" onsubmit="return confirm('මෙම ඇතුළත් කිරීම වැරදි එකක්ද? ගබඩාවෙන් මෙය ඉවත් කිරීමට තහවුරු කරන්න.');" style="display:inline;">
+                <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-1 fw-bold" title="මකන්න">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </form>
+        {% else %}
+            <span class="text-muted small" title="පැරණි දත්ත හෝ වෙනත් අයෙකුගේ ඒවා මකා දැමිය නොහැක">-</span>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- මාසික සාරාංශය පෙන්වන කොටස (දකුණු පස) -->
@@ -67,12 +115,12 @@
             <div class="card-body p-0 bg-light">
                 <ul class="nav nav-tabs border-dark flex-nowrap" id="summaryTabs" role="tablist">
                     <li class="nav-item w-50" role="presentation">
-                        <button class="nav-link active fw-bold text-warning py-2 px-1 w-100" style="color: #d39e00 !important; font-size: 0.9rem;" id="summary-consumable-tab" data-bs-toggle="tab" data-bs-target="#summary-consumable" type="button" role="tab">
+                        <button class="nav-link active fw-bold py-2 px-1 w-100" style="color: #d39e00 !important; font-size: 0.9rem;" id="summary-consumable-tab" data-bs-toggle="tab" data-bs-target="#summary-consumable" type="button" role="tab">
                             <i class="fas fa-box-open me-1 d-none d-sm-inline"></i>පිරිකර/පරිභෝජන
                         </button>
                     </li>
                     <li class="nav-item w-50" role="presentation">
-                        <button class="nav-link fw-bold text-info py-2 px-1 w-100" style="color: #0dcaf0 !important; font-size: 0.9rem;" id="summary-returnable-tab" data-bs-toggle="tab" data-bs-target="#summary-returnable" type="button" role="tab">
+                        <button class="nav-link fw-bold py-2 px-1 w-100" style="color: #0dcaf0 !important; font-size: 0.9rem;" id="summary-returnable-tab" data-bs-toggle="tab" data-bs-target="#summary-returnable" type="button" role="tab">
                             <i class="fas fa-utensils me-1 d-none d-sm-inline"></i>භාණ්ඩ/උපකරණ
                         </button>
                     </li>
@@ -179,7 +227,6 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label text-dark fw-bold">හේතුව (විස්තරය):</label>
-                        <!-- datalist එකක් මගින් මූලික හේතු පෙන්වීම -->
                         <input type="text" class="form-control border-dark" name="reason" list="reasonList" placeholder="තෝරන්න හෝ ටයිප් කරන්න" required>
                         <datalist id="reasonList">
                             <option value="මීයන් කා ඇත">
