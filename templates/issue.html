@@ -12,7 +12,6 @@
     <div class="col-md-9 mb-4">
         <div class="card shadow-lg border-dark h-100">
             <div class="card-header bg-white border-bottom p-0">
-                <!-- Tab දෙක 50/50 බෙදීම (flex-nowrap සහ w-50 භාවිතයෙන්) -->
                 <ul class="nav nav-tabs border-dark flex-nowrap" id="issueTabs" role="tablist">
                     <li class="nav-item w-50" role="presentation">
                         <button class="nav-link active fw-bold text-success py-2 px-1 w-100" style="font-size: 0.9rem;" id="dana-tab" data-bs-toggle="tab" data-bs-target="#dana" type="button" role="tab">
@@ -32,7 +31,7 @@
                     
                     <!-- 1 වන Tab එක: දාන මාන -->
                     <div class="tab-pane fade show active" id="dana" role="tabpanel">
-                        <form action="" method="POST">
+                        <form action="" method="POST" class="prevent-double-submit">
                             <input type="hidden" name="issue_type" value="dana">
                             
                             <div class="mb-4">
@@ -46,7 +45,6 @@
                             <div class="alert border border-dark shadow-sm bg-white" id="autoCalcBox" style="display: none;">
                                 <h6 class="fw-bold text-danger border-bottom pb-2 mb-3"><i class="fas fa-info-circle"></i> අවශ්‍ය ප්‍රමාණයන් කොටු තුල වෙනස් කළ හැක</h6>
                                 
-                                <!-- මූලික භාණ්ඩ -->
                                 <p class="text-dark fw-bold mb-2">මූලික භාණ්ඩ:</p>
                                 <div class="row text-center mb-4 g-2">
                                     <div class="col-4 col-md-2">
@@ -75,7 +73,6 @@
                                     </div>
                                 </div>
 
-                                <!-- අමතර භාණ්ඩ -->
                                 <p class="text-dark fw-bold mb-2">අමතර භාණ්ඩ:</p>
                                 <div class="row text-center mb-2 g-2">
                                     {% set extra_predefined = ['පඩික්කම්', 'කේතල්', 'ජෝග්ගු', 'අඬු කෝප්ප', 'මුතු කුඩ', 'කරඬු ස්ටෑන්ඩ්'] %}
@@ -88,7 +85,6 @@
                                         </div>
                                     {% endfor %}
 
-                                    <!-- Database එකේ තියෙන අනිත් අමතර භාණ්ඩ -->
                                     {% for item in items if item.category == 'returnable' and item.name not in main_items and item.name not in extra_predefined %}
                                         <div class="col-4 col-md-2">
                                             <label class="fw-bold text-dark small">{{ item.name }}</label>
@@ -125,13 +121,15 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow"><i class="fab fa-whatsapp me-2"></i> නිකුත් කර WhatsApp පණිවිඩය යවන්න</button>
+                            <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow">
+                                <i class="fab fa-whatsapp me-2"></i> නිකුත් කර WhatsApp පණිවිඩය යවන්න
+                            </button>
                         </form>
                     </div>
 
-                    <!-- 2 වන Tab එක: පිරිකර -->
+                    <!-- 2 වන Tab එක: පිරිකර / වෙනත් -->
                     <div class="tab-pane fade" id="other" role="tabpanel">
-                        <form action="" method="POST">
+                        <form action="" method="POST" class="prevent-double-submit">
                             <input type="hidden" name="issue_type" value="other">
                             
                             <div class="mb-3">
@@ -160,9 +158,40 @@
                                     <option value="" disabled selected>හේතුව තෝරන්න...</option>
                                     <option value="පරිභෝජනය සඳහා">පරිභෝජනය සඳහා</option>
                                     <option value="sale">විකිණීම සඳහා (මුදල් ආදායම්)</option>
+                                    <option value="returnable_temp">තාවකාලික භාවිතය සඳහා (නැවත භාරදිය යුතුය)</option>
                                 </select>
                             </div>
 
+                            <!-- තාවකාලික නිකුතුවක් තේරූ විට පෙනෙන කොටස -->
+                            <div class="mb-4 bg-info bg-opacity-10 p-3 rounded border border-info" id="tempReturnBox" style="display: none;">
+                                <h6 class="fw-bold text-dark mb-3"><i class="fas fa-undo-alt text-info me-2"></i> තාවකාලික නිකුතු විස්තර (ආපසු භාරගැනීමට)</h6>
+
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-bold">භාවිත කරන ස්ථානය</label>
+                                    <select class="form-select border-dark" name="usage_place" id="usagePlaceSelect" onchange="toggleTempOutsideFields()">
+                                        <option value="inside" selected>විහාරස්ථානය තුළ භාවිතයට</option>
+                                        <option value="outside">විහාරස්ථානයෙන් පිටතට රැගෙන යාමට</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label text-dark fw-bold">ගත්ත / භාරගත් තැනැත්තාගේ නම</label>
+                                    <input type="text" class="form-control border-dark" name="temp_person_name" id="tempPersonName" placeholder="නම ඇතුළත් කරන්න">
+                                </div>
+
+                                <div class="row" id="tempOutsideFields" style="display: none;">
+                                    <div class="col-md-6 mb-3 mb-md-0">
+                                        <label class="form-label text-dark fw-bold">දුරකථන අංකය</label>
+                                        <input type="text" class="form-control border-dark" name="temp_phone_number" id="tempPhoneNumber" placeholder="07XXXXXXXX">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-dark fw-bold">ප්‍රදේශය (ගම)</label>
+                                        <input type="text" class="form-control border-dark" name="temp_area" id="tempArea" list="areaList" placeholder="ටයිප් කරන්න හෝ තෝරන්න">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- විකිණීම තේරූ විට පෙනෙන මුදල් කොටස -->
                             <div class="mb-4 bg-warning bg-opacity-25 p-3 rounded border border-warning" id="amountDiv" style="display: none;">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <label class="form-label text-dark fw-bold mb-0">ගෙවිය යුතු මුළු මුදල (රු.)</label>
@@ -171,7 +200,9 @@
                                 <input type="number" class="form-control border-dark fw-bold text-success fs-4" name="amount" id="totalAmount" min="0" value="0">
                             </div>
 
-                            <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow text-dark"><i class="fas fa-save me-2"></i> පද්ධතියේ සටහන් කරන්න</button>
+                            <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow text-dark">
+                                <i class="fas fa-save me-2"></i> පද්ධතියේ සටහන් කරන්න
+                            </button>
                         </form>
                     </div>
 
@@ -208,7 +239,6 @@
         "අඳනය": 500
     };
 
-    // Database එකේ බඩු වර්ග අනුව වෙන් කිරීම
     const dbItems = {
         'consumable': [],
         'returnable': []
@@ -233,7 +263,6 @@
         nameInput.value = ''; 
         dataList.innerHTML = '';
         
-        // මූලික ලිස්ට් එකයි Database එකේ ලිස්ට් එකයි එකතු කරලා පෙන්නනවා
         let combined = new Set([...defaultItems[category], ...dbItems[category]]);
         
         combined.forEach(item => {
@@ -247,11 +276,47 @@
     function checkReason() {
         const reason = document.getElementById('reasonSelect').value;
         const amountDiv = document.getElementById('amountDiv');
+        const tempReturnBox = document.getElementById('tempReturnBox');
+
         if (reason === 'sale') {
             amountDiv.style.display = 'block';
+            tempReturnBox.style.display = 'none';
+            toggleTempOutsideFields(false);
             calculateTotalAmount(); 
+        } else if (reason === 'returnable_temp') {
+            amountDiv.style.display = 'none';
+            tempReturnBox.style.display = 'block';
+            toggleTempOutsideFields();
         } else {
             amountDiv.style.display = 'none';
+            tempReturnBox.style.display = 'none';
+            toggleTempOutsideFields(false);
+        }
+    }
+
+    function toggleTempOutsideFields(forceHide = false) {
+        const placeSelect = document.getElementById('usagePlaceSelect');
+        const outsideDiv = document.getElementById('tempOutsideFields');
+        const phoneInput = document.getElementById('tempPhoneNumber');
+        const areaInput = document.getElementById('tempArea');
+
+        if (forceHide || !placeSelect) {
+            if (outsideDiv) outsideDiv.style.display = 'none';
+            if (phoneInput) phoneInput.required = false;
+            if (areaInput) areaInput.required = false;
+            return;
+        }
+
+        if (placeSelect.value === 'outside') {
+            outsideDiv.style.display = 'flex';
+            phoneInput.required = true;
+            areaInput.required = true;
+        } else {
+            outsideDiv.style.display = 'none';
+            phoneInput.required = false;
+            areaInput.required = false;
+            phoneInput.value = '';
+            areaInput.value = '';
         }
     }
 

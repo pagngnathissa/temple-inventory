@@ -168,12 +168,18 @@ def issue_items():
             phone_number = request.form.get('phone_number')
             area = request.form.get('area')
             
-            new_lending = Lending(borrower_name=borrower_name, phone_number=phone_number, location=area, issued_by=current_user.id)
+            new_lending = Lending(
+                borrower_name=borrower_name,
+                phone_number=phone_number,
+                location=area,
+                status='borrowed',
+                issued_by=current_user.id
+            )
             db.session.add(new_lending)
             db.session.flush() 
             
             issued_items_text = ""
-            item_counter = 1  # භාණ්ඩ සඳහා අංක දැමීමට
+            item_counter = 1
             
             dana_items = {
                 'පිඟන්': request.form.get('plates_qty', 0, type=int),
@@ -184,7 +190,6 @@ def issue_items():
                 'අත හෝදන භාජන': request.form.get('basins_qty', 0, type=int)
             }
             
-            # Form එකෙන් එන අමතර භාණ්ඩ සියල්ල ලබාගැනීම
             for key, value in request.form.items():
                 if key.startswith('extra_qty_'):
                     item_name = key.replace('extra_qty_', '')
@@ -206,13 +211,11 @@ def issue_items():
                     if current_user.role != 'secret':
                         item.quantity -= qty
                         
-                    # අංක සහිතව ලැයිස්තුව සැකසීම (උදා: 1. පිඟන් - 4)
                     issued_items_text += f"{item_counter}. {item_name} - {qty}\n"
                     item_counter += 1
                     
             db.session.commit()
             
-            # Encoding ගැටළුව විසඳීමට Emojis ඉවත් කර ඇත
             whatsapp_msg = (
                 "*ශ්‍රී බෝධිරාජාරාම විහාරස්ථානය*\n"
                 "භාණ්ඩ නිකුත් කිරීමේ සටහන\n\n"
@@ -233,14 +236,94 @@ def issue_items():
             flash('භාණ්ඩ නිකුත් කිරීම සටහන් කළා.', 'success')
             return redirect(whatsapp_url)
             
-        # 2. පිරිකර සහ වෙනත්
+       # 2. පිරිකර සහ වෙනත් (සහ තාවකාලික නිකුත් කිරීම්)
         elif issue_type == 'other':
+            import urllib.parse
+
             item_name = request.form.get('item_name')
             category = request.form.get('category', 'consumable')
             qty = request.form.get('quantity', 1, type=int)
             reason = request.form.get('reason')
             amount = request.form.get('amount', 0.0, type=float)
-            
+
+            # තාවකාලික භාවිතය සඳහා (නැවත භාරදිය යුතුය)
+            if reason == 'returnable_temp':
+                usage_place = request.form.get('usage_place', 'inside') # 'inside' හෝ 'outside'
+                temp_person_name = (request.form.get('temp_person_name') or '').strip()
+                raw_phone = (request.form.get('temp_phone_number') or '').strip() if usage_place == 'outside' else ''
+                temp_area = (request.form.get('temp_area') or '').strip() if usage_place == 'outside' else ''
+
+                if usage_place == 'outside':
+                    display_location = f"පිටතට - {temp_area}" if temp_area else "පිටතට"
+                    display_phone = raw_phone if raw_phone else "-"
+                else:
+                    display_location = "විහාරස්ථානය තුළ"
+                    display_phone = "-"
+
+                borrower_display_name = temp_person_name if temp_person_name else "විහාරස්ථාන භාවිතය"
+
+                if item_name and qty > 0:
+                    item = Item.query.filter_by(name=item_name).first()
+                    if not item:
+                        item = Item(name=item_name, category='returnable', quantity=0)
+                        db.session.add(item)
+                        db.session.flush()
+
+                    new_lending = Lending(
+                        borrower_name=borrower_display_name,
+                        phone_number=display_phone,
+                        location=display_location,
+                        status='borrowed',
+                        issued_by=current_user.id
+                    )
+                    db.session.add(new_lending)
+                    db.session.flush()
+
+                    lending_item = LendingItem(lending_id=new_lending.id, item_id=item.id, issued_qty=qty)
+                    db.session.add(lending_item)
+
+                    if current_user.role != 'secret':
+                        item.quantity -= qty
+                        new_tx = Transaction(
+                            item_id=item.id,
+                            user_id=current_user.id,
+                            action_type='returnable_temp',
+                            quantity=qty,
+                            amount=0.0,
+                            description=f"තාවකාලික නිකුතුව ({display_location}) - {borrower_display_name}"
+                        )
+                        db.session.add(new_tx)
+
+                    db.session.commit()
+                    flash(f'{item_name} ({qty}) තාවකාලික නිකුතුවක් ලෙස සටහන් කර ආපසු භාරගැනීම් ලැයිස්තුවට එක් කළා!', 'success')
+
+                    # පන්සලෙන් පිටතට නම් සහ වලංගු ෆෝන් නම්බර් එකක් තිබේ නම් WhatsApp පණිවිඩය යවයි
+                    digits_only = ''.join(ch for ch in raw_phone if ch.isdigit())
+                    if usage_place == 'outside' and len(digits_only) >= 9:
+                        whatsapp_msg = (
+                            "*ශ්‍රී බෝධිරාජාරාම විහාරස්ථානය*\n"
+                            "තාවකාලික භාණ්ඩ නිකුත් කිරීමේ සටහන\n\n"
+                            f"නම: {borrower_display_name}\n"
+                            f"ප්‍රදේශය: {temp_area if temp_area else '-'}\n"
+                            f"අංකය: {raw_phone}\n\n"
+                            "*ලබාගත් භාණ්ඩ (ආපසු භාරදිය යුතුය):*\n"
+                            f"1. {item_name} - {qty}\n\n"
+                            f"සටහන් කළේ: {current_user.full_name}"
+                        )
+
+                        encoded_msg = urllib.parse.quote(whatsapp_msg)
+                        formatted_phone = digits_only
+                        if formatted_phone.startswith('0'):
+                            formatted_phone = '94' + formatted_phone[1:]
+                        elif not formatted_phone.startswith('94') and len(formatted_phone) == 9:
+                            formatted_phone = '94' + formatted_phone
+
+                        whatsapp_url = f"https://wa.me/{formatted_phone}?text={encoded_msg}"
+                        return redirect(whatsapp_url)
+
+                return redirect(url_for('dashboard'))
+
+            # සාමාන්‍ය පරිභෝජනය හෝ විකිණීම
             if item_name:
                 item = Item.query.filter_by(name=item_name).first()
                 if not item:
@@ -260,7 +343,6 @@ def issue_items():
         
     items = Item.query.all()
     return render_template('issue.html', items=items)
-
 
 
 @app.route('/inventory', methods=['GET', 'POST'])
@@ -421,7 +503,7 @@ def returns():
 @app.route('/mark_returned/<int:lending_id>', methods=['POST'])
 @login_required
 def mark_returned(lending_id):
-
+    import urllib.parse
 
     lending = Lending.query.get_or_404(lending_id)
     lending.status = 'returned'
@@ -444,38 +526,48 @@ def mark_returned(lending_id):
                 db.session.add(new_tx)
             
             if damaged_qty > 0:
-                new_tx_damage = Transaction(item_id=item.id, user_id=current_user.id, action_type='damaged', quantity=damaged_qty)
+                new_tx_damage = Transaction(
+                    item_id=item.id,
+                    user_id=current_user.id,
+                    action_type='damaged',
+                    quantity=damaged_qty,
+                    description=f"ආපසු භාරගැනීමේදී අඩු/හානි - {lending.borrower_name}"
+                )
                 db.session.add(new_tx_damage)
                 
-            # WhatsApp පණිවිඩයට භාණ්ඩ විස්තර එකතු කිරීම
             returned_details_text += f"{item_counter}. {item.name} - ගෙනගිය: {l_item.issued_qty} | අඩු/හානි: {damaged_qty}\n"
             item_counter += 1
             
     db.session.commit()
     
-    # WhatsApp පණිවිඩය සෑදීම
-    whatsapp_msg = (
-        "🙏 *ශ්‍රී බෝධිරාජාරාම විහාරස්ථානය*\n"
-        "✅ *භාණ්ඩ ආපසු භාරගැනීමේ සටහන*\n\n"
-        f"👤 නම: {lending.borrower_name}\n\n"
-        "ඔබ රැගෙන ගිය භාණ්ඩ සාර්ථකව විහාරස්ථානයට භාරගන්නා ලදී. ඔබගේ පින්කම් කටයුතු සාර්ථක වේවා! 🙏\n\n"
-        "📋 *භාරදුන් විස්තරය:*\n"
-        f"{returned_details_text}\n"
-        f"✍️ සටහන් කළේ: {current_user.full_name}"
-    )
-    
-    import urllib.parse
-    encoded_msg = urllib.parse.quote(whatsapp_msg)
-    formatted_phone = lending.phone_number.strip()
-    if formatted_phone.startswith('0'):
-        formatted_phone = '94' + formatted_phone[1:]
-        
-    whatsapp_url = f"https://wa.me/{formatted_phone}?text={encoded_msg}"
-    
     flash(f'{lending.borrower_name} ගේ භාණ්ඩ භාරගැනීම සාර්ථකයි.', 'success')
-    # මෙතනින් තමයි WhatsApp එකට යොමු කරන්නේ
-    return redirect(whatsapp_url)
 
+    # දුරකථන අංකයක් තිබේ නම් පමණක් WhatsApp වෙත යොමු කරයි (පන්සල ඇතුළත නම් '-' ලෙස පවතී)
+    raw_phone = (lending.phone_number or '').strip()
+    digits_only = ''.join(ch for ch in raw_phone if ch.isdigit())
+
+    if raw_phone and raw_phone != '-' and len(digits_only) >= 9:
+        whatsapp_msg = (
+            "🙏 *ශ්‍රී බෝධිරාජාරාම විහාරස්ථානය*\n"
+            "✅ *භාණ්ඩ ආපසු භාරගැනීමේ සටහන*\n\n"
+            f"👤 නම: {lending.borrower_name}\n\n"
+            "ඔබ රැගෙන ගිය භාණ්ඩ සාර්ථකව විහාරස්ථානයට භාරගන්නා ලදී. ඔබගේ පින්කම් කටයුතු සාර්ථක වේවා! 🙏\n\n"
+            "📋 *භාරදුන් විස්තරය:*\n"
+            f"{returned_details_text}\n"
+            f"✍️ සටහන් කළේ: {current_user.full_name}"
+        )
+
+        encoded_msg = urllib.parse.quote(whatsapp_msg)
+        formatted_phone = digits_only
+        if formatted_phone.startswith('0'):
+            formatted_phone = '94' + formatted_phone[1:]
+        elif not formatted_phone.startswith('94') and len(formatted_phone) == 9:
+            formatted_phone = '94' + formatted_phone
+
+        whatsapp_url = f"https://wa.me/{formatted_phone}?text={encoded_msg}"
+        return redirect(whatsapp_url)
+
+    return redirect(url_for('returns'))
 @app.route('/reports', methods=['GET'])
 @login_required
 def reports():

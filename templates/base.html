@@ -56,5 +56,45 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('form').forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                if (form.dataset.submitting === 'true') {
+                    e.preventDefault();
+                    return false;
+                }
+                form.dataset.submitting = 'true';
+
+                const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+                if (submitBtn) {
+                    setTimeout(function () {
+                        submitBtn.disabled = true;
+                        if (submitBtn.tagName === 'BUTTON') {
+                            submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> සටහන් වෙමින් පවතී...';
+                        }
+                    }, 10);
+                }
+            });
+        });
+    });
+
+    // Browser Back බටන් එකෙන් ආපසු පැමිණියහොත් බටන් එක නැවත සක්‍රීය කිරීමට
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('form').forEach(function (form) {
+            form.dataset.submitting = 'false';
+            const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+            if (submitBtn && submitBtn.disabled) {
+                submitBtn.disabled = false;
+                if (submitBtn.dataset.originalHtml) {
+                    submitBtn.innerHTML = submitBtn.dataset.originalHtml;
+                }
+            }
+        });
+    });
+</script>
+
 </body>
 </html>
