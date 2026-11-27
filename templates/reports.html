@@ -131,6 +131,9 @@
                         <tr>
                             <th class="text-start ps-4">පිරිකර/පරිභෝජන භාණ්ඩයේ නම</th>
                             <th>දැනට ඉතිරි ප්‍රමාණය</th>
+                            {% if current_user.role in ['owner', 'admin'] %}
+                            <th class="no-export">පාලනය (Admin)</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -138,9 +141,25 @@
                         <tr>
                             <td class="text-start fw-bold text-dark ps-4">{{ item.name }}</td>
                             <td><span class="badge {% if item.quantity < 5 %}bg-danger{% else %}bg-success{% endif %} fs-6">{{ item.quantity }}</span></td>
+                            {% if current_user.role in ['owner', 'admin'] %}
+                            <td class="no-export">
+                                <button type="button" class="btn btn-outline-primary btn-sm fw-bold me-1"
+                                        data-id="{{ item.id }}" data-name="{{ item.name }}"
+                                        onclick="openEditModal(this)" title="නම වෙනස් කරන්න">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm fw-bold"
+                                        data-id="{{ item.id }}" data-name="{{ item.name }}"
+                                        onclick="openDeleteModal(this)" title="භාණ්ඩය මකන්න">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% else %}
-                        <tr><td colspan="2" class="py-4 fw-bold text-muted">දත්ත නොමැත.</td></tr>
+                        <tr>
+                            <td colspan="{% if current_user.role in ['owner', 'admin'] %}3{% else %}2{% endif %}" class="py-4 fw-bold text-muted">දත්ත නොමැත.</td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -153,6 +172,9 @@
                         <tr>
                             <th class="text-start ps-4">උපකරණ භාණ්ඩයේ නම</th>
                             <th>දැනට ඉතිරි ප්‍රමාණය</th>
+                            {% if current_user.role in ['owner', 'admin'] %}
+                            <th class="no-export">පාලනය (Admin)</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -160,9 +182,25 @@
                         <tr>
                             <td class="text-start fw-bold text-dark ps-4">{{ item.name }}</td>
                             <td><span class="badge {% if item.quantity < 10 %}bg-danger{% else %}bg-info text-dark{% endif %} fs-6">{{ item.quantity }}</span></td>
+                            {% if current_user.role in ['owner', 'admin'] %}
+                            <td class="no-export">
+                                <button type="button" class="btn btn-outline-primary btn-sm fw-bold me-1"
+                                        data-id="{{ item.id }}" data-name="{{ item.name }}"
+                                        onclick="openEditModal(this)" title="නම වෙනස් කරන්න">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm fw-bold"
+                                        data-id="{{ item.id }}" data-name="{{ item.name }}"
+                                        onclick="openDeleteModal(this)" title="භාණ්ඩය මකන්න">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% else %}
-                        <tr><td colspan="2" class="py-4 fw-bold text-muted">දත්ත නොමැත.</td></tr>
+                        <tr>
+                            <td colspan="{% if current_user.role in ['owner', 'admin'] %}3{% else %}2{% endif %}" class="py-4 fw-bold text-muted">දත්ත නොමැත.</td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -311,6 +349,64 @@
     </div>
 </div>
 
+<!-- ================= 3. Admin Edit & Delete Confirmation Modals ================= -->
+{% if current_user.role in ['owner', 'admin'] %}
+<!-- භාණ්ඩයේ නම වෙනස් කිරීමේ Modal එක -->
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-primary shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-edit me-2"></i> භාණ්ඩයේ නම වෙනස් කරන්න
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editItemForm" method="POST">
+                <input type="hidden" name="current_tab" id="editCurrentTab" value="">
+                <div class="modal-body">
+                    <label for="editItemNameInput" class="form-label fw-bold text-dark">නව භාණ්ඩයේ නම:</label>
+                    <input type="text" class="form-control border-dark fw-bold" id="editItemNameInput" name="new_name" required>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold" data-bs-dismiss="modal">අවලංගු කරන්න</button>
+                    <button type="submit" class="btn btn-primary btn-sm fw-bold">
+                        <i class="fas fa-save me-1"></i> වෙනස්කම් සුරකින්න
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- භාණ්ඩය මැකීම තහවුරු කිරීමේ Modal එක -->
+<div class="modal fade" id="deleteItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-exclamation-triangle me-2"></i> භාණ්ඩය මකා දැමීම තහවුරු කරන්න
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="deleteItemForm" method="POST">
+                <input type="hidden" name="current_tab" id="deleteCurrentTab" value="">
+                <div class="modal-body text-center py-4">
+                    <p class="fs-5 mb-2">ඔබට මෙම භාණ්ඩය ඇත්තටම මකා දැමීමට අවශ්‍යද?</p>
+                    <h4 class="fw-bold text-danger mb-3" id="deleteItemNameText"></h4>
+                    <small class="text-muted d-block">මකා දැමූ පසු මෙය නැවත ලබාගත නොහැක.</small>
+                </div>
+                <div class="modal-footer bg-light justify-content-center">
+                    <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">නැත (අවලංගු කරන්න)</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">
+                        <i class="fas fa-trash-alt me-1"></i> ඔව්, මකා දමන්න
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
     let currentActiveReportId = 'stock-consumable';
 
@@ -325,6 +421,7 @@
 
     // Card එකක් ක්ලික් කළ විට ප්‍රධාන Menu එක සඟවා අදාළ වාර්තා පිටුව ලෝඩ් කිරීම
     function openReportView(sectionId) {
+        if (!reportTitles[sectionId]) return;
         currentActiveReportId = sectionId;
 
         // 1. ප්‍රධාන Menu එක සඟවන්න
@@ -350,6 +447,41 @@
         document.getElementById('mainReportMenu').classList.remove('d-none');
     }
 
+    // Edit හෝ Delete කළ පසු නැවත ඒ වාර්තාවම ඉබේම විවෘත කිරීම
+    document.addEventListener('DOMContentLoaded', function() {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab && reportTitles[tab]) {
+            openReportView(tab);
+        }
+    });
+
+    // Edit Modal එක විවෘත කිරීම
+    function openEditModal(button) {
+        const itemId = button.getAttribute('data-id');
+        const itemName = button.getAttribute('data-name');
+        
+        document.getElementById('editItemNameInput').value = itemName;
+        document.getElementById('editCurrentTab').value = currentActiveReportId;
+        document.getElementById('editItemForm').action = `/edit_item/${itemId}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+        modal.show();
+    }
+
+    // Delete Confirmation Modal එක විවෘත කිරීම
+    function openDeleteModal(button) {
+        const itemId = button.getAttribute('data-id');
+        const itemName = button.getAttribute('data-name');
+        
+        document.getElementById('deleteItemNameText').textContent = `"${itemName}"`;
+        document.getElementById('deleteCurrentTab').value = currentActiveReportId;
+        document.getElementById('deleteItemForm').action = `/delete_item/${itemId}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteItemModal'));
+        modal.show();
+    }
+
     function getActiveTableId() {
         if (currentActiveReportId === 'stock-consumable') return 'table_stock_consumable';
         if (currentActiveReportId === 'stock-returnable') return 'table_stock_returnable';
@@ -362,13 +494,23 @@
 
     function exportToExcel() {
         let tableId = getActiveTableId();
-        let wb = XLSX.utils.table_to_book(document.getElementById(tableId), {sheet: "Report"});
+        let originalTable = document.getElementById(tableId);
+        let clonedTable = originalTable.cloneNode(true);
+        // Edit/Delete තීරුව Excel වාර්තාවෙන් ඉවත් කිරීම
+        clonedTable.querySelectorAll('.no-export').forEach(el => el.remove());
+
+        let wb = XLSX.utils.table_to_book(clonedTable, {sheet: "Report"});
         XLSX.writeFile(wb, tableId + '_Report.xlsx');
     }
 
     function exportToPDF() {
         let tableId = getActiveTableId();
         let element = document.getElementById(tableId);
+        let noExportEls = element.querySelectorAll('.no-export');
+
+        // PDF ගන්නා මොහොතට පමණක් Edit/Delete තීරුව සඟවා නැවත පෙන්වීම
+        noExportEls.forEach(el => el.classList.add('d-none'));
+
         let opt = {
             margin:       0.5,
             filename:     tableId + '_Report.pdf',
@@ -376,7 +518,12 @@
             html2canvas:  { scale: 2 },
             jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
-        html2pdf().set(opt).from(element).save();
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            noExportEls.forEach(el => el.classList.remove('d-none'));
+        }).catch(() => {
+            noExportEls.forEach(el => el.classList.remove('d-none'));
+        });
     }
 </script>
 {% endblock %}

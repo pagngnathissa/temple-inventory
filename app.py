@@ -673,6 +673,53 @@ def restore_database():
         flash('කරුණාකර නිවැරදි .db වර්ගයේ ගොනුවක් තෝරන්න.', 'danger')
         return redirect(url_for('dashboard'))
 
+# ================= භාණ්ඩයක නම Edit කිරීම (Admin/Owner පමණි) =================
+@app.route('/edit_item/<int:item_id>', methods=['POST'])
+@login_required
+def edit_item(item_id):
+    if current_user.role not in ['owner', 'admin']:
+        flash('මෙම ක්‍රියාව කිරීමට ඔබට අවසර නොමැත!', 'danger')
+        return redirect(url_for('reports'))
+
+    # සටහන: ඔයාගේ database table model එකේ නම 'Item' නෙවෙයි නම් (උදා: StockItem) එය මෙතනට දාන්න
+    item = Item.query.get_or_404(item_id)
+    new_name = request.form.get('new_name', '').strip()
+    current_tab = request.form.get('current_tab', '')
+
+    if new_name:
+        old_name = item.name
+        item.name = new_name
+        db.session.commit()
+        flash(f'"{old_name}" යන නම "{new_name}" ලෙස සාර්ථකව වෙනස් කරන ලදී.', 'success')
+    else:
+        flash('වලංගු භාණ්ඩ නමක් ඇතුළත් කරන්න.', 'warning')
+
+    return redirect(url_for('reports', tab=current_tab))
+
+
+# ================= භාණ්ඩයක් Delete කිරීම (Admin/Owner පමණි) =================
+@app.route('/delete_item/<int:item_id>', methods=['POST'])
+@login_required
+def delete_item(item_id):
+    if current_user.role not in ['owner', 'admin']:
+        flash('මෙම ක්‍රියාව කිරීමට ඔබට අවසර නොමැත!', 'danger')
+        return redirect(url_for('reports'))
+
+    # සටහන: ඔයාගේ database table model එකේ නම 'Item' නෙවෙයි නම් එය මෙතනට දාන්න
+    item = Item.query.get_or_404(item_id)
+    item_name = item.name
+    current_tab = request.form.get('current_tab', '')
+
+    try:
+        db.session.delete(item)
+        db.session.commit()
+        flash(f'"{item_name}" භාණ්ඩය සාර්ථකව මකා දමන ලදී.', 'success')
+    except Exception:
+        db.session.rollback()
+        flash(f'"{item_name}" භාණ්ඩයට අදාළ පැරණි ගනුදෙනු වාර්තා ඇති බැවින් මකා දැමිය නොහැක. නම වැරදි නම් Edit බටන් එකෙන් නම නිවැරදි කරන්න.', 'danger')
+
+    return redirect(url_for('reports', tab=current_tab))
+
 # --- මෙන්න මේ කොටසට උඩින් තමයි ඉහත කෝඩ් එක දාන්න ඕනේ ---
 if __name__ == '__main__':
     with app.app_context():
